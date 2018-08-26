@@ -71,6 +71,7 @@ def comments_strip(string):
 
 def reactions_strip(string):
     friends = 1 + string[0].count(',')
+    e = 1 + string[0].count(' e ')
     string = string[0].split()[::-1]
     if len(string) == 1:
         string = string[0]
@@ -81,7 +82,11 @@ def reactions_strip(string):
     string = string[0]
     while string.rfind('.') != -1:
         string = string[0:string.rfind('.')] + string[string.rfind('.')+1:]
-    return int(string) + friends
+    
+    if not string.isdigit():
+        return e
+    else:
+        return int(string) + friends
 
 class FbcrawlItem(scrapy.Item):
     # define the fields for your item here like:

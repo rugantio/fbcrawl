@@ -78,9 +78,7 @@ class FacebookSpider(scrapy.Spider):
         )
 
     def parse_page(self, response):        
-        for post in response.xpath("//div[contains(@data-ft,'top_level_post_id')]"): #select all posts
-            self.logger.info('Parsing post %s', post)
-            
+        for post in response.xpath("//div[contains(@data-ft,'top_level_post_id')]"): #select all posts            
             new = ItemLoader(item=FbcrawlItem(),selector=post)
             new.add_xpath('comments', ".//div/a[contains(text(),'comment')]/text()")
             new.add_xpath('url', ".//a[contains(text(),'Notizia completa')]/@href")
