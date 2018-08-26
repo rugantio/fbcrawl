@@ -70,18 +70,18 @@ def comments_strip(string):
     return string[0].rstrip(" commenti")
 
 def reactions_strip(string):
+    friends = 1 + string[0].count(',')
+    string = string[0].split()[::-1]
     if len(string) == 1:
         string = string[0]
         while string.rfind('.') != -1:
             string = string[0:string.rfind('.')] + string[string.rfind('.')+1:]
         return string
-    string = string[0].split()
-    string = string[::-1][0]
-    
+
+    string = string[0]
     while string.rfind('.') != -1:
         string = string[0:string.rfind('.')] + string[string.rfind('.')+1:]
-
-    return int(string) + 1
+    return int(string) + friends
 
 class FbcrawlItem(scrapy.Item):
     # define the fields for your item here like:
@@ -119,5 +119,4 @@ class FbcrawlItem(scrapy.Item):
     sigh = scrapy.Field()                      
     grrr = scrapy.Field()                      
     share = scrapy.Field()                      # num of shares
-    num_id = scrapy.Field()                     # progressive int associated to the entry in the final table, not present in the webpage
     url = scrapy.Field()
