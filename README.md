@@ -58,7 +58,7 @@ The project is thus divided in several files that serve different purposes:
 <br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         **fbcrawl.py** -- defines the crawling functions and the selectors
 
-## The Spider (gnews.py)
+## The Spider (fbcrawl.py)
 The core of the crawler is this spider class, that defines the spider name, `fbcrawl`. On init it navigates to `mbasic.facebook.com` and calls the parse method which logs into facebook according to the provided `credentials`, that are passed as parameters at execution time (see "How to use"). Several checkpoints and exceptions are nicely handled to provide a clean log in, after which the parse_page method is called with the page name given at runtime and the crawling process begins recursively retrieving all the posts in every page and for each post it retrieves all the features, calling parse_post, and all the reactions (you guessed it) using parse_reactions.
 
 The webpage are parsed and the fields are extracted with **XPath** scrapy selectors. These selectors are based on python lib `lxml` so they are very fast (supposedly better than `beautifulsoup`). Another way to extract relevant data is to use **CSS** selector.
@@ -113,18 +113,18 @@ Scrapy's default behavior is to follow robots.txt guidelines, so we need to disa
 ## How to use
 Make sure that scrapy is installed and clone this repository. Navigate through the project's top level directory and launch scrapy with:
 ```
-scrapy crawl fb -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="NAMEOFTHEPAGETOCRAWL" -o DUMPFILE.csv
+scrapy crawl fb -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="NAMEOFTHEPAGETOCRAWL"
 
 ```
 the keywords will be passed to the \__init__ method of fbcrawl.py.
 
 If you want to (also) export the table locally you don't need to add a new pipeline because scrapy has an option to store all the items in a CSV or in a JSON file (or in XML). This is especially useful if you want to do some client-side analysis for example using pandas or if you want to replicate the table in a file system and not in the database. To export to CSV type:
 ```
- scrapy crawl gnews -a keywords="KEYWORDS TO SEARCH" -o FILE.csv
+scrapy crawl fb -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="NAMEOFTHEPAGETOCRAWL" -o DUMPFILE.csv
 ```
 To export to JSON the option is the same, just change the extension:
 ```
- scrapy crawl gnews -a keywords="KEYWORDS TO SEARCH" -o FILE.json
+scrapy crawl fb -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="NAMEOFTHEPAGETOCRAWL" -o DUMPFILE.json
 ```
 Keep in mind that the default behavior is to append the field crawled over to the already existing file and not to overwrite it. There are many other ways of exporting, check out the [exporter reference](https://doc.scrapy.org/en/latest/topics/exporters.html) if you want to know more.
 
