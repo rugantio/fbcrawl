@@ -9,7 +9,7 @@ It is for educational purposes only, to show how a crawler can be made to recurs
 # Introduction
 
 <div style="text-align:center">
-<img src="./trump.png" alt="Donald Trump" width="1080px">
+<img src="./trump.png" alt="Donald Trump" width="1080">
 </div>
 
 What features can fbcrawl obtain? Everything that you see in the table is crawled by default. I decided to simplify the timestamp feature, leaving out the hour and to ignore comments and commentators, which are going to be parsed post-by-post by another crawler.
