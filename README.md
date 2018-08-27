@@ -128,4 +128,25 @@ scrapy crawl fb -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="N
 ```
 Keep in mind that the default behavior is to append the field crawled over to the already existing file and not to overwrite it. There are many other ways of exporting, check out the [exporter reference](https://doc.scrapy.org/en/latest/topics/exporters.html) if you want to know more.
 
-More information regarding Scrapy's [Deployment](https://doc.scrapy.org/en/latest/topics/deploy.html) and [Common Practices](https://doc.scrapy.org/en/latest/topics/practices.html) are present in the official documentation. 
+More information regarding Scrapy's [Deployment](https://doc.scrapy.org/en/latest/topics/deploy.html) and [Common Practices](https://doc.scrapy.org/en/latest/topics/practices.html) are present in the official documentation.
+
+#TODO
+
+Number of comments is wrong, it only counts direct comments and not reply comments, because that's how `mbasic.facebook.com` works. Also the number of shares is not retrieved. To fix both of these issues:
+
+* extract URL of post and use m.facebook.com to retrieve these data
+
+At the moment crawling starts from the beginning of 2017, it needs to go back until 2004:
+
+* write appropriate recursive functions in parse_page
+* set two parameters at runtime (**from** ant **until**) in \__init__
+* memorize datetime in a local variable in parsing method and check that datetime in the post respect the period, otherwise stop crawling
+* this is faster than using the pipeline but might not be as accurate, so change pipelines.py and settings.py accordingly
+
+The crawler works only in italian:
+
+* add english interface support
+
+Comments and commentators are ignored:
+
+* write a spyder that crawls all the metadata possible

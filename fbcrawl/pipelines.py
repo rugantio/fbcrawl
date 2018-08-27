@@ -10,7 +10,9 @@ from datetime import datetime
 
 class FbcrawlPipeline(object):
     def process_item(self, item, spider):
-        if item['date'] < datetime(2017,3,4).date():
-            raise DropItem("Dropping element because it's older than 04/03/2017")
+        if item['date'] < datetime(2017,1,1).date():
+            raise DropItem("Dropping element because it's older than 01/01/2017")
+        elif item['date'] > datetime(2018,3,4).date():
+            raise DropItem("Dropping element because it's newer than 04/03/2018")
         else:
             return item
