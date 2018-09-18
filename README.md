@@ -1,5 +1,5 @@
 # fbcrawl
-Fbcrawl is an advanced crawler for Facebook, written in python3 based on the [Scrapy](https://scrapy.org/) framework. 
+Fbcrawl is an advanced crawler for Facebook, written in python based on the [Scrapy](https://scrapy.org/) framework. 
 
 ## DISCLAIMER
 This software is NOT to be used, for any reason. It violates Facebook's terms and conditions.
@@ -34,7 +34,7 @@ The way scrapy works is through an engine that manages granularly every step of 
 
 The project is thus divided in several files that serve different purposes:
 
-\newscrapy
+\fbcrawl
 <br />&nbsp;&nbsp;&nbsp;&nbsp;
     README.md -- this file
 <br />&nbsp;&nbsp;&nbsp;&nbsp;
