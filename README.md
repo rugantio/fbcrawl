@@ -139,6 +139,7 @@ You can try it out with:
 ```
 scrapy crawl comments -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="LINKOFTHEPOSTTOCRAWL" -o DUMPFILE.csv
 ```
+Make sure that the `page` option is a proper post link, that begins with the pagename and is accessible from mbasic.facebook.com.
 
 # TODO
 
