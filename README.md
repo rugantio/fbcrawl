@@ -1,10 +1,10 @@
 # fbcrawl
-Fbcrawl is an advanced crawler for Facebook, written in python based on the [Scrapy](https://scrapy.org/) framework. 
+Fbcrawl is an advanced crawler for Facebook, written in python, based on the [Scrapy](https://scrapy.org/) framework. 
 
 ## DISCLAIMER
-This software is NOT to be used, for any reason. It violates Facebook's terms and conditions.
+This software is NOT to be used, for any reason. It is not authorized by Facebook and neither compliant with Facebook's [robots.txt](https://www.facebook.com/robots.txt). It violates Facebook's [terms and conditions on scraping](http://www.facebook.com/apps/site_scraping_tos_terms.php).
 
-It is for educational purposes only, to show how a crawler can be made to recursively parse a facebook page.
+It is released for educational purposes only, to show how a crawler can be made to recursively parse a facebook page.
 
 # Introduction
 
@@ -12,13 +12,15 @@ It is for educational purposes only, to show how a crawler can be made to recurs
 <img src="./trump.png" alt="Donald Trump" width="1080">
 </div>
 
+EDIT: fbcrawl can now crawl comments! check out the "how to crawl comments" section!
+
 What features can fbcrawl obtain? Everything that you see in the table is crawled by default. I decided to simplify the timestamp feature, leaving out the hour and to ignore comments and commentators, which are going to be parsed post-by-post by another crawler.
 
 You can see that fbcrawl makes asynchronous requests and thus the tuples are not in chronological order, populates a csv or a json file.
 
 Fbcrawl makes use of the mobile version of facebook: [https://mbasic.facebook.com](https://mbasic.facebook.com) because it's all plain HTML and we can navigate easily through the pages without cumbersome javascript injections. 
 
-Unfortunately one thing I was not able to retrieve is the post sharing number because it's not displayed in this basic version, if someone knows how to collect this feature, please let me know. 
+Unfortunately one thing I was not able to retrieve is the post sharing number because it's not displayed in this basic version, if someone knows how to collect this feature, please let me know.
 
 ## Installation
 Requirements are: **python3** (python2 is also supported), **scrapy** and other dependencies libraries (twisted, libxml2 etc.).
@@ -130,6 +132,14 @@ Keep in mind that the default behavior is to append the field crawled over to th
 
 More information regarding Scrapy's [Deployment](https://doc.scrapy.org/en/latest/topics/deploy.html) and [Common Practices](https://doc.scrapy.org/en/latest/topics/practices.html) are present in the official documentation.
 
+# How to crawl comments 
+
+A new spider is now dedicated to crawl all the comments from a post, along with the name of the commentators. It's been written in a rush, so it's pretty ugly and no other metadata is available at the moment (PR welcome!). 
+You can try it out with:
+```
+scrapy crawl comments -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="LINKOFTHEPOSTTOCRAWL" -o DUMPFILE.csv
+```
+
 # TODO
 
 Number of comments is wrong, it only counts direct comments and not reply comments, because that's how `mbasic.facebook.com` works. Also the number of shares is not retrieved. To fix both of these issues:
@@ -147,6 +157,6 @@ The crawler works only in italian:
 
 * add english interface support
 
-Comments and commentators are ignored:
+Comments and commentators are naively parsed:
 
 * write a spyder that crawls all the metadata possible
