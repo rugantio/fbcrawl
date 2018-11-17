@@ -113,6 +113,8 @@ FEED_EXPORT_FIELDS = ["source", "date", "text", "reactions","likes","ahah","love
 Scrapy's default behavior is to follow robots.txt guidelines, so we need to disable this by setting `ROBOTSTXT_OBEY = False`.
 
 ## How to use
+The crawler has support only for italian language, please change your facebook interface language to italian or the crawler will not work.
+
 Make sure that scrapy is installed and clone this repository. Navigate through the project's top level directory and launch scrapy with:
 ```
 scrapy crawl fb -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="NAMEOFTHEPAGETOCRAWL"
