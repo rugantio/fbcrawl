@@ -77,7 +77,7 @@ class FacebookSpider(scrapy.Spider):
             callback=self.parse_page,
         )
 
-    def parse_page(self, response):        
+    def parse_page(self, response):  
         for post in response.xpath("//div[contains(@data-ft,'top_level_post_id')]"): #select all posts            
             new = ItemLoader(item=FbcrawlItem(),selector=post)
             new.add_xpath('comments', ".//div/a[contains(text(),'comment')]/text()")
@@ -101,7 +101,7 @@ class FacebookSpider(scrapy.Spider):
         new = ItemLoader(item=FbcrawlItem(),response=response,parent=response.meta['item'])            
         new.add_xpath('source', "//td/div/h3/strong/a/text() | //span/strong/a/text() | //div/div/div/a[contains(@href,'post_id')]/strong/text()")
         new.add_xpath('date', '//div/div/abbr/text()')
-        new.add_xpath('text','//div[@data-ft]//p//text()')
+        new.add_xpath('text','//div[@data-ft]//p//text() | //div[@data-ft]/div[@class]/div[@class]/text()')
         new.add_xpath('reactions',"//a[contains(@href,'reaction/profile')]/div/div/text()")   
         
         reactions = response.xpath("//div[contains(@id,'sentence')]/a[contains(@href,'reaction/profile')]/@href")
