@@ -78,10 +78,10 @@ class FacebookSpider(scrapy.Spider):
         )
 
     def parse_page(self, response):
-        for post in response.xpath('//div[@id="MPhotoContent"]/div/div/div/div/div[not(contains(@id,"see"))]'): #select all posts            
+        for post in response.xpath('//div[count(@class)=1 and count(@id)=1 and contains("0123456789", substring(@id,1,1))]'): #select all posts            
             new = ItemLoader(item=FbcrawlItem(),selector=post)
             new.add_xpath('source', "./div/h3/a/text()")
-            new.add_xpath('text',"div/div/span[not(contains(text(),' · '))]/text() | ./div/div/text()")
+            new.add_xpath('text',"//div/div/span[not(contains(text(),' · '))]/text() | ./div/div/text()")
             yield new.load_item()
         
         rispostina = response.xpath('//div/a[contains(text(),"rispost")]/@href')

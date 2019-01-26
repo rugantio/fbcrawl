@@ -83,7 +83,7 @@ def parse_date(date):
         day = int(str(datetime.now().date()-timedelta(1)).split(sep='-')[2])
         
     #day with 3 month length of this year
-    elif (len(date) == 2 and len(date[1]) == 3) or (len(date) == 4 and len(date[1]) == 3):
+    elif (len(date) == 2 or len(date) == 3 or len(date) == 4) and len(date[1]) == 3:
         day = int(date[0])
         month = mesi_abbr[date[1]]
         
