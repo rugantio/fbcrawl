@@ -74,9 +74,8 @@ def parse_date(date):
     if len(date) == 0:
         return 'Error: no data'
     
-    #no check for today
-    #elif len(date) == 1 or date[1] == 'h':
-        #pass
+    elif len(date) == 2 and date[1] == 'h' and int(str(datetime.now().time()).split(sep=':')[0]) - int(date[0]) >= 0:
+        pass
     
     #yesterday
     elif date[0] == 'Ieri' or (date[1] == 'h' and int(str(datetime.now().time()).split(sep=':')[0]) - int(date[0]) < 0):
