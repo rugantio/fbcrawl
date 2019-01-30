@@ -11,8 +11,10 @@ class FacebookSpider(scrapy.Spider):
     """    
     name = "fb"
 
-    def __init__(self, email='', password='', page='', **kwargs):
+    def __init__(self, email='', password='', page='', year=2018, **kwargs):
         super(FacebookSpider, self).__init__(**kwargs)
+        
+        self.year = int(year)        #arguments are passed as strings
     
         if not email or not password:
             raise ValueError("You need to provide valid email and password!")
@@ -37,7 +39,9 @@ class FacebookSpider(scrapy.Spider):
         )
   
     def parse_home(self, response):
-        '''Parse user news feed page'''
+        '''
+        Parse user news feed page. This code is outdate and needs review.
+        '''
         if response.css('#approvals_code'):
             # Handle 'Approvals Code' checkpoint (ask user to enter code).
             if not self.code:
@@ -69,7 +73,9 @@ class FacebookSpider(scrapy.Spider):
             # Handle 'Someone tried to log into your account' warning.
             return FormRequest.from_response(
                 response, callback=self.parse_home, dont_filter=True,)
-        # Else go to the user profile.
+        # Else go to the page requested.
+        if self.page.find('.facebook.com/') != -1:
+            self.page = self.page[28:]
         href = response.urljoin(self.page)
         self.logger.info('Parse function called on %s', href)
         return scrapy.Request(
@@ -77,25 +83,53 @@ class FacebookSpider(scrapy.Spider):
             callback=self.parse_page,
         )
 
-    def parse_page(self, response):  
-        for post in response.xpath("//div[contains(@data-ft,'top_level_post_id')]"): #select all posts            
+    def parse_page(self, response):
+        #select all posts
+        for post in response.xpath("//div[contains(@data-ft,'top_level_post_id')]"):            
             new = ItemLoader(item=FbcrawlItem(),selector=post)
-            new.add_xpath('comments', ".//div/a[contains(text(),'comment')]/text()")
-            new.add_xpath('url', ".//a[contains(text(),'Notizia completa')]/@href")
-            
-            post = post.xpath(".//a[contains(text(),'Notizia completa')]/@href").extract() #returns full post-link in a list
+            new.add_xpath('comments', "./div[2]/div[2]/a[1]/text()")        
+            new.add_xpath('url', ".//a[contains(@href,'footer')]/@href")
+            #page_url
+            #new.add_value('url',response.url)
+            #returns full post-link in a list
+            post = post.xpath(".//a[contains(@href,'footer')]/@href").extract() 
             temp_post = response.urljoin(post[0])        
-            yield scrapy.Request(temp_post, self.parse_post,dont_filter = True, meta={'item':new})       
+            yield scrapy.Request(temp_post, self.parse_post, meta={'item':new})       
 
-        next_page = response.xpath("//div/a[contains(text(),'Altri')]/@href")
-        if len(next_page) > 0:
-            next_page = response.urljoin(next_page[0].extract())
-            yield scrapy.Request(next_page, callback=self.parse_page)
+        #load following page
+#        next_page = response.xpath('//*[@id="structured_composer_async_container"]/div[2]/a/@href')
+        next_page = response.xpath("//div[2]/a[contains(@href,'timestart=') and not(contains(text(),'ece')) and not(contains(text(),number()))]/@href").extract()      
+        if len(next_page) == 0:
+            if response.meta['flag'] == 3 and self.year <= 2015:
+                self.logger.info('2015 reached, flag = {}'.format(response.meta['flag']))
+                next_page = response.xpath("//div/a[contains(@href,'time') and contains(text(),'2015')]/@href").extract()
+                self.logger.info('next_page = {}'.format(next_page[0]))
+                new_page = response.urljoin(next_page[0])
+                yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':4}) 
+            elif response.meta['flag'] == 2 and self.year <= 2016:
+                self.logger.info('2016 reached, flag = {}'.format(response.meta['flag']))                
+                next_page = response.xpath("//div/a[contains(@href,'time') and contains(text(),'2016')]/@href").extract()
+                self.logger.info('next_page = {}'.format(next_page[0]))
+                new_page = response.urljoin(next_page[0])
+                yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':3}) 
+            elif response.meta['flag'] == 1 and self.year <= 2017:            
+                self.logger.info('2017 reached, flag = {}'.format(response.meta['flag']))                
+                next_page = response.xpath("//div/a[contains(@href,'time') and contains(text(),'2017')]/@href").extract()
+                self.logger.info('next_page = {}'.format(next_page[0]))
+                new_page = response.urljoin(next_page[0])
+                yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':2})      
+            elif response.meta['flag'] == 0 and self.year <= 2018:                      
+                self.logger.info('2018 reached, flag = {}'.format(response.meta['flag']))
+                next_page = response.xpath("//div/a[contains(@href,'time') and contains(text(),'2018')]/@href").extract()
+                self.logger.info('next_page = {}'.format(next_page[0]))
+                new_page = response.urljoin(next_page[0])
+                yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':1})
         else:
-            next_page = response.xpath("//div/a[contains(text(),'2017')]/@href")
-            if len(next_page) > 0:
-                next_page = response.urljoin(next_page[0].extract())
-                yield scrapy.Request(next_page, callback=self.parse_page)
+            new_page = response.urljoin(next_page[0])
+            if 'flag' in response.meta:
+                yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':response.meta['flag']})
+            else:
+                yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':0})
                 
     def parse_post(self,response):
         new = ItemLoader(item=FbcrawlItem(),response=response,parent=response.meta['item'])            
@@ -106,7 +140,7 @@ class FacebookSpider(scrapy.Spider):
         
         reactions = response.xpath("//div[contains(@id,'sentence')]/a[contains(@href,'reaction/profile')]/@href")
         reactions = response.urljoin(reactions[0].extract())
-        yield scrapy.Request(reactions, callback=self.parse_reactions, dont_filter = True, meta={'item':new})
+        yield scrapy.Request(reactions, callback=self.parse_reactions, meta={'item':new})
         
     def parse_reactions(self,response):
         new = ItemLoader(item=FbcrawlItem(),response=response, parent=response.meta['item'])
