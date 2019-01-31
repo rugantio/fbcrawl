@@ -89,7 +89,6 @@ class FacebookSpider(scrapy.Spider):
         for i in range(len(rispostina)):
             risp = response.urljoin(rispostina[i].extract())
             yield scrapy.Request(risp, callback=self.parse_rispostina)
-
         
         next_page = response.xpath("//div[contains(@id,'see_next')]/a/@href")
         if len(next_page) > 0:
