@@ -21,16 +21,14 @@ EDIT: fbcrawl can now crawl comments! check out the "how to crawl comments" sect
 
 What features can fbcrawl obtain? Everything that you see in the table is crawled by default. I decided to simplify the timestamp feature, leaving out the hour and to ignore comments and commentators, which are going to be parsed post-by-post by another crawler.
 
-You can see that fbcrawl makes asynchronous requests and thus the tuples are not in chronological order, populates a csv or a json file.
+You can see that fbcrawl makes **asynchronous** requests and thus the tuples are not in chronological order, populates a csv or a json file.
 
-Fbcrawl makes use of the mobile version of facebook: [https://mbasic.facebook.com](https://mbasic.facebook.com) because it's all plain HTML and we can navigate easily through the pages without cumbersome javascript injections. 
-
-Unfortunately one thing I was not able to retrieve is the post sharing number because it's not displayed in this basic version, if someone knows how to collect this feature, please let me know.
+Fbcrawl makes use of the mobile version of facebook: [https://mbasic.facebook.com](https://mbasic.facebook.com) because it's all plain HTML and we can navigate easily through the pages without cumbersome javascript injections.
 
 ## Installation
 Requirements are: **python3** (python2 is also supported), **scrapy** and other dependencies libraries (twisted, libxml2 etc.).
 
-Scrapy can be installed through the package manager of the distribution (in my arch box is simply called "scrapy") or through internal python package system that also should take care of required dependencies (just don't mix the two methods, it would produces conflicts), typing:
+Scrapy can be installed through the package manager of the distribution (in my arch box is simply called "scrapy") or through internal python package system, typing:
 
  ```pip install scrapy```
 
@@ -66,20 +64,20 @@ The project is thus divided in several files that serve different purposes:
         **fbcrawl.py** -- defines the crawling functions and the selectors
 
 ## The Spider (fbcrawl.py)
-The core of the crawler is this spider class, that defines the spider name, `fbcrawl`. On init it navigates to `mbasic.facebook.com` and calls the parse method which logs into facebook according to the provided `credentials`, that are passed as parameters at execution time (see "How to use"). Several checkpoints and exceptions are nicely handled to provide a clean log in, after which the parse_page method is called with the page name given at runtime and the crawling process begins recursively retrieving all the posts in every page and for each post it retrieves all the features, calling parse_post, and all the reactions (you guessed it) using parse_reactions.
+The core of the crawler is this spider class, `fbcrawl`. On init, it navigates to `mbasic.facebook.com` and logs into facebook according to the provided `credentials`, passed as parameters at execution time (see "How to use"). Several checkpoints and exceptions are nicely handled to provide a clean log in, after which the parse_page method is called with the page name given at runtime and the crawling process begins recursively retrieving all the posts found in every page. For each of the post it retrieves all the features, using the callback parse_post, and all the reactions, using parse_reactions.
 
-The webpage are parsed and the fields are extracted with **XPath** scrapy selectors. These selectors are based on python lib `lxml` so they are very fast (supposedly better than `beautifulsoup`). Another way to extract relevant data is to use **CSS** selector.
+The webpage are parsed and the fields are extracted with **XPath** selectors. These selectors are based on python lib `lxml` so they are very fast. Another way to extract relevant data is to use **CSS** selector.
 
 I decided to use XPath to navigate the webpage as one would navigate a filesystem, taking into consideration only the `/article` elements. If you know nothing about XPath [this guide](https://blog.scrapinghub.com/2016/10/27/an-introduction-to-xpath-with-examples/) and [this cheatsheet](http://www.zvon.org/comp/r/tut-XPath_1.html#Pages~List_of_XPaths) can be helpful, along with the original [W3C docs](https://www.w3.org/TR/2017/REC-xpath-31-20170321/).
 
-The XPath are easy to obtain using Firefox's or Chromium's dev tools, but sometimes the field relative to a property changes location, which is something to keep in mind. For example, notice how I had to handle the `source` field: `new.add_xpath('source', '//span/strong/a/text() | //div/a/strong/text() | //td/div/h3/strong/a/text()')`. It has a selector that connects three different XPath connected with an OR operator. This kind of juggling is helpful to maintain consistency of the data in our table. The control on the data and the policy to use is often implemented in the Item Pipeline (in our simple project we are using ).
+The XPath are easy to obtain using Firefox's or Chromium's dev tools, but sometimes the field relative to a property changes location, which is something to keep in mind. For example, notice how I had to handle the `source` field: `new.add_xpath('source', '//span/strong/a/text() | //div/a/strong/text() | //td/div/h3/strong/a/text()')`. This kind of juggling is helpful to maintain consistency of the data in our table. The control on the data and the policy to use is often implemented in the Item Pipeline (in our simple project we are using ).
 
 So the parse methods populates Item fields (to be explained in the next section) and pass control over to the Item Loader.
 
 Refer to Scrapy's [Spider documentation](https://docs.scrapy.org/en/latest/topics/spiders.html) for more info.
 
 ## Items (items.py)
-This file defines an Item class, so that the fields that we have extracted can be grouped in Items and organized in a more concise manner. Item objects are simple containers used to collect the scraped data. They provide a dictionary-like API (similar to Django Models) with a convenient syntax for declaring their available fields.
+This file defines an Item class, so that the fields that we have extracted can be grouped in Items and organized in a more concise manner. Item objects are simple containers used to collect the scraped data. They provide a dictionary-like API with a convenient syntax for declaring their available fields.
 
 I have extracted every field present in the post elements and add a few local ones. Namely for each article we have:
 
@@ -97,14 +95,14 @@ grrr        -    number of grrr
 comments    -    number of comments
 url         -    relative link to the post
 ```
-Notice that this file is also used to modify the fields that we want to change before deciding what to do with the items. To accomplish this kind of tasks, scrapy provides a series of built-in "`processors`" (such as the `input_processor`) and functions (such as `TakeFirst()`) that we can use to adjust the fields we want. These are explained in the official [Item Loaders](https://docs.scrapy.org/en/latest/topics/loaders.html) section of the documentation.
+Notice that this file is also used to modify the fields that we want to change before deciding what to do with the items. To accomplish these kinds of tasks, scrapy provides a series of built-in "`processors`" (such as the `input_processor`) and functions (such as `TakeFirst()`) that we can use to adjust the fields we want. These are explained in the official [Item Loaders](https://docs.scrapy.org/en/latest/topics/loaders.html) section of the documentation.
 
 Also Refer to Scrapy's [Item documentation](https://docs.scrapy.org/en/latest/topics/items.html) for more info.
 
 ## Settings (settings.py)
 Scrapy is a very powerful framework and it allows complex tweaking to be put in place. In this project we changed just only a handful of settings, but keep in mind that there are a lot of them.
 
-Pipelines are useful methods to manipulate items as you can see from the [official guide](https://doc.scrapy.org/en/latest/topics/item-pipeline.html). In our project I have prepared a pipeline to drop all the posts that were made before a certain date, you can check out the code in `pipelines.py`. Pipelines are not initialized by default, they need to be declared here. Since we can define more than one of them a number  in the 0-1000 range is used to indicate priority (lower is first). This is why we have set:
+Pipelines are useful methods to manipulate items as you can see from the [official guide](https://doc.scrapy.org/en/latest/topics/item-pipeline.html). In our project I have prepared a pipeline to drop all the posts that were made before a certain date, you can check out the code in `pipelines.py`. Pipelines are not initialized by default, they need to be declared here. Since we can define more than one of them a number in the 0-1000 range is used to indicate priority (lower is first). This is why we have set:
 ```
 ITEM_PIPELINES = {
     'fbcrawl.pipelines.FbcrawlPipeline': 300,
@@ -118,24 +116,28 @@ FEED_EXPORT_FIELDS = ["source", "date", "text", "reactions","likes","ahah","love
 Scrapy's default behavior is to follow robots.txt guidelines, so we need to disable this by setting `ROBOTSTXT_OBEY = False`.
 
 ## How to use
-The crawler has support only for italian language, please change your facebook interface language to italian or the crawler will not work.
 
 Make sure that scrapy is installed and clone this repository. Navigate through the project's top level directory and launch scrapy with:
 ```
-scrapy crawl fb -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="NAMEOFTHEPAGETOCRAWL"
+scrapy crawl fb -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="NAMEOFTHEPAGETOCRAWL" -a year="2015" -a lang="it" -o DUMPFILE.csv
 
 ```
-the keywords will be passed to the \__init__ method of fbcrawl.py.
+For example, let's say I want to crawl Donald Trump's page:
+```
+scrapy crawl fb -a email="barackobama@gmail.com" -a password="10wnyu31" -a page="DonaldTrump" -a year="2015" -a lang="it" -o Trump.csv
+```
+The **email** and **password** are valid fb credentials; the login might be cumbersome and some exceptions are handled, like the "save-device" checkpoint.
 
-If you want to (also) export the table locally you don't need to add a new pipeline because scrapy has an option to store all the items in a CSV or in a JSON file (or in XML). This is especially useful if you want to do some client-side analysis for example using pandas or if you want to replicate the table in a file system and not in the database. To export to CSV type:
-```
-scrapy crawl fb -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="NAMEOFTHEPAGETOCRAWL" -o DUMPFILE.csv
-```
-To export to JSON the option is the same, just change the extension:
-```
-scrapy crawl fb -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="NAMEOFTHEPAGETOCRAWL" -o DUMPFILE.json
-```
-Keep in mind that the default behavior is to append the field crawled over to the already existing file and not to overwrite it. There are many other ways of exporting, check out the [exporter reference](https://doc.scrapy.org/en/latest/topics/exporters.html) if you want to know more.
+The **page** parameter is the name of the page, although full links (with facebook domain inside) are also understood. 
+
+The **year** parameter tells fbcrawl when to stop going back in time; it's optional, the default behavior is to stop at the beginning of 2018.
+
+The **lang** parameter is of recent introduction. The crawler has support for just a handful of languages at the moment: italian ("it" - best supported), english (en), spanish (es), french(fr), portuguese (pt). If not provided, the language interface will be inferred and if it's supported, will be chosen accordingly. If the language is not supported, the crawler will **fail**, in this case change your language interface from within facebook (settings -> language).
+
+While the crawling occurs you can investigate the correct working of the spiders in the console, to show more informations change the last line of settings.py to `LOG_LEVEL = 'DEBUG'`. At the end of the process, if everything has been done right, the result can be visualized on a table.
+
+The "-o " option states that result is to be saved in a .csv file (comma separated values), similar to a txt file that can be interpreted as a table. Fbcrawl can also save to JSON easily, but this feature is not implemented.
+Keep in mind that the default behavior is to append the items crawled at the bottom of the already existing file and not to overwrite it. There are many other ways of exporting, check out the [exporter reference](https://doc.scrapy.org/en/latest/topics/exporters.html) if you want to know more.
 
 More information regarding Scrapy's [Deployment](https://doc.scrapy.org/en/latest/topics/deploy.html) and [Common Practices](https://doc.scrapy.org/en/latest/topics/practices.html) are present in the official documentation.
 
@@ -149,11 +151,12 @@ scrapy crawl comments -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a p
 Make sure that the `page` option is a proper post link, that begins with the pagename and is accessible from mbasic.facebook.com.
 
 # TODO
+##Idea Brainstorm
 ~~Comments and commentators are naively parsed~~
 * ~~write a spyder that crawls all the metadata possible~~
 
-The crawler only works in italian:
-* add english interface support
+~~The crawler only works in italian:~~
+* ~~add english interface support~~
 
 The number of shares is not retrieved, it is not available in `mbasic.facebook.com`. Also the number of comments field only counts direct comments and not reply comments, because that's how mbasic works. To fix both of these issues:
 * extract URL of post and use m.facebook.com to retrieve these data
@@ -165,8 +168,8 @@ Some other interesting features can be derived. Comments and commentators can be
 * count comments from same commentator under a post
 * add features representing connections between commentators (-> reply-to, <- replied-to)
 
-Crawling starts from the beginning of 2017, it needs to go back until 2004:
-* write appropriate recursive functions in parse_page
+~~Crawling starts from the beginning of 2017, it needs to go back until 2004:~~
+* ~~write appropriate recursive functions in parse_page~~
 * set two parameters at runtime (**from** ant **until**) in \__init__
 * memorize datetime in a local variable in parsing method and check that datetime in the post respect the period, otherwise stop crawling
 * this is faster than using the pipeline but might not be as accurate, so change pipelines.py and settings.py accordingly
