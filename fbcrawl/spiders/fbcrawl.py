@@ -16,13 +16,6 @@ class FacebookSpider(scrapy.Spider):
                                'sigh','grrr','comments','url']
     }
     
-    @classmethod
-    def from_crawler(cls, crawler, **kwargs):
-        settings = cls(crawler.settings)
-        if 'conc' in kwargs:
-            settings.set('CONCURRENT_REQUESTS',32)
-        return settings
-    
     def __init__(self,**kwargs):
         #turn off annoying logging, set LOG_LEVEL=DEBUG in settings.py to see more logs
         logger = logging.getLogger('scrapy.middleware')
