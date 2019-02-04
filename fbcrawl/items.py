@@ -413,35 +413,38 @@ def url_strip(url):
     #catchin '&id=' is enough to identify the post
     i = fullurl.find('&id=')
     if i != -1:
-        j = fullurl[:i+4] + fullurl[i+4:].split('&')[0]
-        return j
-    else:
-        return fullurl
+        return fullurl[:i+4] + fullurl[i+4:].split('&')[0]
+    else:  #catch photos   
+        i = fullurl.find('/photos/')
+        if i != -1:
+            return fullurl[:i+8] + fullurl[i+8:].split('/?')[0]
+        else: #catch albums
+            i = fullurl.find('/albums/')
+            if i != -1:
+                return fullurl[:i+8] + fullurl[i+8:].split('/?')[0]
+            else:
+                return fullurl
+    
 
 class FbcrawlItem(scrapy.Item):
-    source = scrapy.Field(
-            output_processor=TakeFirst()
-    )                     # page that published the post
-
+    source = scrapy.Field( 
+        output_processor=TakeFirst()
+    )   
     date = scrapy.Field(      # when was the post published
-            input_processor=TakeFirst(),
-            output_processor=parse_date
+        input_processor=TakeFirst(),
+        output_processor=parse_date
     )       
-                                    
     text = scrapy.Field(
-            output_processor=Join(separator=u'')
+        output_processor=Join(separator=u'')
     )                       # full text of the post
-
     comments = scrapy.Field(
-            output_processor=comments_strip
+        output_processor=comments_strip
     )                                       
-
     reactions = scrapy.Field(
-            output_processor=reactions_strip
+        output_processor=reactions_strip
     )                  # num of reactions
-    
     likes = scrapy.Field(
-            output_processor=reactions_strip
+        output_processor=reactions_strip
     )                      
     ahah = scrapy.Field()                      
     love = scrapy.Field()                      
@@ -451,4 +454,5 @@ class FbcrawlItem(scrapy.Item):
     share = scrapy.Field()                      # num of shares
     url = scrapy.Field(
         output_processor=url_strip
-        )
+    )
+    shared_from = scrapy.Field()

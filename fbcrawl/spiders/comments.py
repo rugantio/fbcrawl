@@ -4,7 +4,6 @@ from scrapy.loader import ItemLoader
 from scrapy.http import FormRequest
 from fbcrawl.items import FbcrawlItem
 
-
 class FacebookSpider(scrapy.Spider):
     """
     Parse FB comments, given a page (needs credentials)
@@ -78,22 +77,27 @@ class FacebookSpider(scrapy.Spider):
         )
 
     def parse_page(self, response):
-        for post in response.xpath('//div[count(@class)=1 and count(@id)=1 and contains("0123456789", substring(@id,1,1))]'): #select all posts            
-            new = ItemLoader(item=FbcrawlItem(),selector=post)
-            new.add_xpath('source', "./div/h3/a/text()")
-            new.add_xpath('text',"//div/div/span[not(contains(text(),' · '))]/text() | ./div/div/text()")
-            yield new.load_item()
-        
-        rispostina = response.xpath('//div/a[contains(text(),"rispost")]/@href')
-
-        for i in range(len(rispostina)):
-            risp = response.urljoin(rispostina[i].extract())
+        #answer from page
+        for risposta in response.xpath('./div[string-length(@class) = 5 and count(@id)=1 and contains("0123456789", substring(@id,1,1))]'):            
+#            resp = ItemLoader(item=FbcrawlItem(),selector=risposta)
+            rispostina = risposta.xpath('./a[@href and text()="Altro"]/@href')
+            risp = response.urljoin(rispostina[0].extract())
             yield scrapy.Request(risp, callback=self.parse_rispostina)
         
-        next_page = response.xpath("//div[contains(@id,'see_next')]/a/@href")
-        if len(next_page) > 0:
-            next_page = response.urljoin(next_page[0].extract())
-            yield scrapy.Request(next_page, callback=self.parse_page)
+
+#        for i in range(len(rispostina)):
+#            risp = response.urljoin(rispostina[i].extract())
+#
+#        for post in response.xpath('//div[string-length(@class) = 2 and count(@id)=1 and contains("0123456789", substring(@id,1,1))]'): #select all posts            
+#            new = ItemLoader(item=FbcrawlItem(),selector=post)
+#            new.add_xpath('source', "./div/h3/a/text()")
+#            new.add_xpath('text',"./div[1]/div[1]/text()")            
+#            yield new.load_item()          
+#
+#        next_page = response.xpath("//div[contains(@id,'see_next')]/a/@href")
+#        if len(next_page) > 0:
+#            next_page = response.urljoin(next_page[0].extract())
+#            yield scrapy.Request(next_page, callback=self.parse_page)
 
     def parse_rispostina(self,response):
         for daje in response.xpath("//div[contains(@id,'root')]/div/div/div"): #select all posts                                
