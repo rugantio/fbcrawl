@@ -15,54 +15,70 @@ class FacebookSpider(scrapy.Spider):
                                'reactions','likes','ahah','love','wow', \
                                'sigh','grrr','comments','url']
     }
-
-    def __init__(self,email='',password='',page='',year=2018,lang='_',*args,**kwargs):
+    
+    @classmethod
+    def from_crawler(cls, crawler, **kwargs):
+        settings = cls(crawler.settings)
+        if 'conc' in kwargs:
+            settings.set('CONCURRENT_REQUESTS',32)
+        return settings
+    
+    def __init__(self,**kwargs):
         #turn off annoying logging, set LOG_LEVEL=DEBUG in settings.py to see more logs
         logger = logging.getLogger('scrapy.middleware')
         logger.setLevel(logging.WARNING)
         super().__init__(**kwargs)
         
         #email & pass need to be passed as attributes!
-        if not email or not password:
+        if 'email' not in kwargs or 'password' not in kwargs:
             raise AttributeError('You need to provide valid email and password:\n'
                                  'scrapy fb -a email="EMAIL" -a password="PASSWORD"')
         else:
-            self.email = email
-            self.password = password
-            
+            self.logger.info('Email and password provided, using these as credentials')
+
         #page name parsing (added support for full urls)
-        if not page:
+        if 'page' not in kwargs:
             raise AttributeError('You need to provide a valid page name to crawl!'
                                  'scrapy fb -a page="PAGENAME"')
-        elif page.find('https://www.facebook.com/') != -1:
-            self.page = page[25:]
-        elif page.find('https://mbasic.facebook.com/') != -1:
-            self.page = page[28:]
-        elif page.find('https://m.facebook.com/') != -1:
-            self.page = page[23:]
+        elif self.page.find('https://www.facebook.com/') != -1:
+            self.page = self.page[25:]
+            self.logger.info('Page attribute provided, scraping "{}"'.format(self.page))
+        elif self.page.find('https://mbasic.facebook.com/') != -1:
+            self.page = self.page[28:]
+            self.logger.info('Page attribute provided, scraping "{}"'.format(self.page))
+        elif self.page.find('https://m.facebook.com/') != -1:
+            self.page = self.page[23:]
+            self.logger.info('Page attribute provided, scraping "{}"'.format(self.page))
         else:
-            self.page = page
+            self.logger.info('Page attribute provided, scraping "{}"'.format(self.page))
         
-        #parse year 
-        assert int(year) <= 2019 and int(year) >= 2006, 'Year must be a number 2006 <= year <= 2019'
-        self.year = int(year)    #arguments are passed as strings
+        #parse year
+        if 'year' not in kwargs:
+            self.year = 2018
+            self.logger.info('Year attribute not found, set scraping back to {}'.format(self.year))
+        else:
+            assert int(self.year) <= 2019 and int(self.year) >= 2006,\
+            'Year must be an int number 2006 <= year <= 2019'
+            self.year = int(self.year)    #arguments are passed as strings
+            self.logger.info('Year attribute found, set scraping back to {}'.format(self.year))
 
         #parse lang, if not provided (but is supported) it will be guessed in parse_home
-        if lang=='_':
+        if 'lang' not in kwargs:
             self.logger.info('Language attribute not provided, I will try to guess it from the fb interface')
             self.logger.info('To specify, add the lang parameter: scrapy fb -a lang="LANGUAGE"')
             self.logger.info('Currently choices for "LANGUAGE" are: "en", "es", "fr", "it", "pt"')
-            self.lang=lang                            
-        elif lang == 'en'  or lang == 'es' or lang == 'fr' or lang == 'it' or lang == 'pt':
-            self.lang = lang.lower()
+            self.lang = '_'                       
+        elif self.lang == 'en'  or self.lang == 'es' or self.lang == 'fr' or self.lang == 'it' or self.lang == 'pt':
+            self.logger.info('Language attribute recognized, using "{}" for the facebook interface'.format(self.lang))
         else:
-            self.logger.info('Lang "{}" not currently supported'.format(lang))                             
+            self.logger.info('Lang "{}" not currently supported'.format(self.lang))                             
             self.logger.info('Currently supported languages are: "en", "es", "fr", "it", "pt"')                             
             self.logger.info('Change your interface lang from facebook and try again')
             raise AttributeError('Language provided not currently supported')
 
         #current year, this variable is needed for parse_page recursion
         self.k = 2019
+        #count number of posts, used to prioritized parsing and correctly insert in the csv
         self.count = 0
         
         self.start_urls = ['https://mbasic.facebook.com']    
