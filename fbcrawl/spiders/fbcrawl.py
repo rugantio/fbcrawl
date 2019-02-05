@@ -10,13 +10,14 @@ class FacebookSpider(scrapy.Spider):
     Parse FB pages (needs credentials)
     """    
     name = "fb"
+    is_debug = True
     custom_settings = {
         'FEED_EXPORT_FIELDS': ['source','shared_from','date','text', \
                                'reactions','likes','ahah','love','wow', \
                                'sigh','grrr','comments','url']
     }
     
-    def __init__(self,**kwargs):
+    def __init__(self, *args, **kwargs):
         #turn off annoying logging, set LOG_LEVEL=DEBUG in settings.py to see more logs
         logger = logging.getLogger('scrapy.middleware')
         logger.setLevel(logging.WARNING)
@@ -142,7 +143,6 @@ class FacebookSpider(scrapy.Spider):
             self.logger.info('Parsing post n = {}'.format(abs(self.count)))
             new.add_xpath('comments', "./div[2]/div[2]/a[1]/text()")        
             new.add_xpath('url', ".//a[contains(@href,'footer')]/@href")
-            new.add_xpath('reactions',".//a[contains(@aria-label,'reactions')]/text()")   
 
             #page_url #new.add_value('url',response.url)
             #returns full post-link in a list
@@ -156,8 +156,8 @@ class FacebookSpider(scrapy.Spider):
         #year for 1-click only and proceeds to click on others
         new_page = response.xpath("//div[2]/a[contains(@href,'timestart=') and not(contains(text(),'ent')) and not(contains(text(),number()))]/@href").extract()      
         if not new_page: 
-            if response.meta['flag'] == self.k and self.year <= self.k:                
-                self.logger.info('There are no more, clicking on year = {}'.format(self.k))
+            if response.meta['flag'] == self.k and self.k >= self.year:                
+                self.logger.info('There are no more, flag set at = {}'.format(self.k))
                 xpath = "//div/a[contains(@href,'time') and contains(text(),'" + str(self.k) + "')]/@href"
                 new_page = response.xpath(xpath).extract()
                 if new_page:
@@ -170,20 +170,26 @@ class FacebookSpider(scrapy.Spider):
                         self.logger.info('XPATH not found for year {}'.format(self.k-1))
                         self.k -= 1
                         self.logger.info('Trying with previous year, flag={}'.format(self.k))
+                        if self.k < self.year:
+                            self.logger.info('The previous year to crawl is less than the parameter year: {} < {}'.format(self.k,self.year))
+                            self.logger.info('This is not handled well, please re-run with -a year="{}" or less'.format(self.k))
+                            break                        
                         xpath = "//div/a[contains(@href,'time') and contains(text(),'" + str(self.k) + "')]/@href"
                         new_page = response.xpath(xpath).extract()
                     self.logger.info('New page found with flag {}'.format(self.k))
                     new_page = response.urljoin(new_page[0])
                     self.k -= 1
                     self.logger.info('Now going with flag {}'.format(self.k))
-                    yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k})                            
+                    yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k}) 
+            else:
+                self.logger.info('Crawling has finished with no errors!')
         else:
             new_page = response.urljoin(new_page[0])
             if 'flag' in response.meta:
                 self.logger.info('Page scraped, click on more! flag = {}'.format(response.meta['flag']))
                 yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':response.meta['flag']})
             else:
-                self.logger.info('FLAG DOES NOT REPRESENT ACTUAL YEAR')
+                self.logger.info('FLAG DOES NOT ALWAYS REPRESENT ACTUAL YEAR')
                 self.logger.info('First page scraped, click on more! Flag not set, default flag = {}'.format(self.k))
                 yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k})
                 
