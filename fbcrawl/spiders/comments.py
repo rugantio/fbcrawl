@@ -1,7 +1,6 @@
 import scrapy
 
 from scrapy.loader import ItemLoader
-from scrapy.http import FormRequest
 from fbcrawl.spiders.fbcrawl import FacebookSpider
 from fbcrawl.items import CommentsItem
 
@@ -14,7 +13,9 @@ class CommentsSpider(FacebookSpider):
     custom_settings = {
         'FEED_EXPORT_FIELDS': ['source','reply_to','date','text', \
                                'reactions','likes','ahah','love','wow', \
-                               'sigh','grrr','url']
+                               'sigh','grrr','url'],
+        'DUPEFILTER_CLASS' : 'scrapy.dupefilters.BaseDupeFilter',
+        'CONCURRENT_REQUESTS':1, 
     }
 
     def __init__(self, *args, **kwargs):
@@ -32,7 +33,7 @@ class CommentsSpider(FacebookSpider):
             source = reply.xpath('.//h3/a/text()').extract()
             answer = reply.xpath('.//a[contains(@href,"repl")]/@href').extract()
             ans = response.urljoin(answer[::-1][0])
-            self.logger.info('Nested comment at page {}'.format(ans))
+            self.logger.info('{} nested comment @ page {}'.format(str(response.meta['index']),ans))
             yield scrapy.Request(ans,
                                  callback=self.parse_reply,
                                  meta={'reply_to':source,
@@ -42,16 +43,19 @@ class CommentsSpider(FacebookSpider):
         #loads regular comments     
         if not response.xpath(path):
             path2 = './/div[string-length(@class) = 2 and count(@id)=1 and contains("0123456789", substring(@id,1,1)) and not(.//div[contains(@id,"comment_replies")])]'
-            for reply in response.xpath(path2):
+            
+            for i,reply in enumerate(response.xpath(path2)):
+                self.logger.info('{} regular comment @ page {}'.format(i,response.url))
                 new = ItemLoader(item=CommentsItem(),selector=reply)
                 new.context['lang'] = self.lang           
                 new.add_xpath('source','.//h3/a/text()')  
                 new.add_xpath('text','.//div[h3]/div[1]//text()')
                 new.add_xpath('date','.//abbr/text()')
+                new.add_value('url',response.url)
                 yield new.load_item()
-#            
-#        #previous comments
-        if not response.xpath(path) and not response.xpath(path2):
+            
+        #previous comments
+        if not response.xpath(path):
             for next_page in response.xpath('.//div[contains(@id,"see_next")]'):
                 new_page = next_page.xpath('.//@href').extract()
                 new_page = response.urljoin(new_page[0])
@@ -59,7 +63,7 @@ class CommentsSpider(FacebookSpider):
                 yield scrapy.Request(new_page,
                                      callback=self.parse_page,
                                      meta={'index':1})        
-#        
+        
     def parse_reply(self,response):
         '''
         parse reply to comments, root comment is added if flag
@@ -88,7 +92,7 @@ class CommentsSpider(FacebookSpider):
                 
             back = response.xpath('//div[contains(@id,"comment_replies_more_1")]/a/@href').extract()
             if back:
-                self.logger.info('Back found, trying to go back')
+                self.logger.info('Back found, more nested comments')
                 back_page = response.urljoin(back[0])
                 yield scrapy.Request(back_page, 
                                      callback=self.parse_reply,
@@ -99,8 +103,8 @@ class CommentsSpider(FacebookSpider):
                                            'index':response.meta['index']})
             else:
                 next_reply = response.meta['url']
-                self.logger.info('Nested comments crawl finished, heading to home page: {}'.format(response.meta['url']))
-                yield scrapy.Request(next_reply, dont_filter=True,
+                self.logger.info('Nested comments crawl finished, heading to proper page: {}'.format(response.meta['url']))
+                yield scrapy.Request(next_reply,
                                      callback=self.parse_page,
                                      meta={'index':response.meta['index']+1})
                 
@@ -117,7 +121,7 @@ class CommentsSpider(FacebookSpider):
                 yield new.load_item()
             #keep going backwards
             back = response.xpath('//div[contains(@id,"comment_replies_more_1")]/a/@href').extract()
-            self.logger.info('Back found, trying to go back')
+            self.logger.info('Back found, more nested comments')
             if back:
                 back_page = response.urljoin(back[0])
                 yield scrapy.Request(back_page, 
@@ -130,6 +134,6 @@ class CommentsSpider(FacebookSpider):
             else:
                 next_reply = response.meta['url']
                 self.logger.info('Nested comments crawl finished, heading to home page: {}'.format(response.meta['url']))
-                yield scrapy.Request(next_reply, dont_filter=True,
+                yield scrapy.Request(next_reply,
                                      callback=self.parse_page,
                                      meta={'index':response.meta['index']+1})
