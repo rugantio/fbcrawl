@@ -135,12 +135,12 @@ The **year** parameter tells fbcrawl when to stop going back in time; it's optio
 
 The **lang** parameter is of recent introduction and it is the language of facebook interface. If the language is not supported, the crawler will **fail**, in this case change your language interface from within facebook (settings -> language). The crawler has support for just a handful of languages at the moment: italian ("it") is the original and best supported, it will return datetime format for every post, english (en), spanish (es), french(fr), portuguese (pt) will also work for crawling but the timestamp of the post will not be in year-month-day format. If not provided, the language interface will be inferred and if it's supported, will be chosen accordingly.
 
-By design scrapy is **asynchronous**, it will not return time ordered rows, you can see that the datetime is not linear. Scrapy makes 16 concurrent requests, which allows to crawl a facebook page recursively really quickly. If you want the crawling (and the CSV) ordered **chronologically** you can add **-s CONCURRENT_REQUESTS = 1** at runtime or change the parameter in the settings, keep in mind that crawling will be a lot slower.
+By design scrapy is **asynchronous**, it will not return time ordered rows, you can see that the datetime is not linear. Scrapy makes 16 concurrent requests, which allows to crawl a facebook page recursively really quickly. If you want the crawling (and the CSV) ordered **chronologically** you can add **-s CONCURRENT_REQUESTS=1** at runtime or change the parameter in the settings, keep in mind that crawling will be a lot slower.
 
 While the crawling occurs you can investigate the correct working of the spiders in the console, to show more informations change the last line of settings.py to `LOG_LEVEL = 'DEBUG'`. At the end of the process, if everything has been done right, the result can be visualized on a table.
 
 The "-o " option states that result is to be saved in a .csv file (comma separated values), similar to a txt file that can be interpreted as a table. Fbcrawl can also save to JSON easily, but this feature is not implemented.
-Keep in mind that the default behavior is to append the items crawled at the bottom of the already existing file and not to overwrite it, so you might want to prefix your scrapy command with something like `rm OLDTABLE.csv;`. There are many other ways of exporting, check out the [exporter reference](https://doc.scrapy.org/en/latest/topics/exporters.html) if you want to know more.
+Keep in mind that the default behavior is to append the items crawled at the bottom of the already existing file and not to overwrite it, so you might want to prefix your scrapy command with something like `rm OLDTABLE.csv; scrapy crawl fb etc.`. There are many other ways of exporting, check out the [exporter reference](https://doc.scrapy.org/en/latest/topics/exporters.html) if you want to know more.
 
 More information regarding Scrapy's [Deployment](https://doc.scrapy.org/en/latest/topics/deploy.html) and [Common Practices](https://doc.scrapy.org/en/latest/topics/practices.html) are present in the official documentation.
 
@@ -154,7 +154,7 @@ scrapy crawl comments -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a p
 Make sure that the `page` option is a proper post link, that begins with the pagename and is accessible from mbasic.facebook.com.
 
 # TODO
-##Idea Brainstorm
+## Idea Brainstorm
 ~~The crawler only works in italian:~~
 * ~~add english interface support~~
 * ~~add spanish interface support~~
@@ -164,14 +164,13 @@ Make sure that the `page` option is a proper post link, that begins with the pag
 ~~Crawling starts from the beginning of 2017, it needs to go back until 2006:~~
 * ~~write appropriate recursive functions in parse_page~~
 
-Retrieve CSV timely ordered:
-* ~~Implement synchronous crawling to ~~
+~~Retrieve CSV timely ordered:~~
+* ~~Implement synchronous crawling ~~
 
 ~~Comments and commentators are not parsed:~~
 * ~~write a spyder that crawls all the comments from a given post ~~
 * scrape reactions from comments
 * add features representing connections between commentators (-> reply-to, <- replied-to)
-
 
 The number of shares is not retrieved, it is not available in `mbasic.facebook.com`. Also the number of comments field only counts direct comments and not reply comments, because that's how mbasic works. To fix both of these issues:
 * extract URL of post and use m.facebook.com to retrieve these data
