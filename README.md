@@ -144,14 +144,45 @@ Keep in mind that the default behavior is to append the items crawled at the bot
 
 More information regarding Scrapy's [Deployment](https://doc.scrapy.org/en/latest/topics/deploy.html) and [Common Practices](https://doc.scrapy.org/en/latest/topics/practices.html) are present in the official documentation.
 
-# How to crawl comments (comments.py)
-## CURRENTLY BEING REFACTORED
-A new spider is now dedicated to crawl all the comments from a post, along with the name of the commentators. It's been written in a rush, so it's pretty ugly and no other metadata is available at the moment (PR welcome!).
+## How to crawl comments (comments.py)
+
+A new spider is now dedicated to crawl all the comments from a post (not a page!).
+
+<div style="text-align:center">
+<img src="./comments.png" alt="Trump comments" width="1080">
+</div>
+
 You can try it out with:
+
 ```
 scrapy crawl comments -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="LINKOFTHEPOSTTOCRAWL" -o DUMPFILE.csv
 ```
-Make sure that the `page` option is a proper post link, that begins with the pagename and is accessible from mbasic.facebook.com.
+
+The use is similar to fb spider, the only difference being the -a page parameter, which now is the link to a post. Make sure that the `page` option is a proper post link, for example:
+
+```
+rm trump_comments.csv; scrapy crawl comments -a email="obama@gmail.com" -a password="cm380jixke" -a page="https://mbasic.facebook.com/story.php?story_fbid=10162169751605725&id=153080620724" -o trump_comments.csv
+```
+
+
+(!) Some comments are duplicated. This is because facebook chooses to display a comment both in one page and in the next. There are several ways of handling this unwanted (although interesting on its own) behavior. It's not possible to leave scrapy duplicate filter on, because this would make the crawler quit when it encounters duplicates, leaving out many comments. The best way of handling duplicates is to clean the CSV afterwards using pandas of the csv python module.
+For example, with pandas:
+```
+import pandas as pd
+df = pd.read_csv('./trump.csv')
+df2 = df[df.duplicated() == False]
+df2.to_csv('./trump.csv',index=False)
+```
+Another option would be to integrate this process with scrapy, writing a pipeline that checks all the fileds for duplicates and drops the items that are caught (however the crawling would be slower).
+
+The comments spider is able to crawl all nested replied-to comments. The root comment is indicated as `ROOT` in the `reply-to` column and the replies have a reference to the profile name that they are answering to, in the same `reply-to` column. They usually follow the `ROOT` comment in order, but it's not easy to perfectly turn off concurrency in scrapy, so that's might not always be the case. For regular comments, that don't get replies, the `reply-to` column is empty.
+
+The supported facebook interface at the moment are `EN` and `IT`, they can be specified via the `-a lang` optional parameter, they would be guessed otherwise. The difference of using a different language interface is in the way the date is handled. The `EN` interface just retrieves the datetime as a string and it's precise to the minute. The `IT` interface processes the datetime and it yields a python `datetime` format, useful for doing time series analysis with pandas for example.
+
+To enforce concurrency the `CONCURRENT_REQUESTS` parameter is set to `1`, this slows down the crawler but yields a tidier CSV in the end. If you don't care about row orders you can increase the parameter to a higher number and crawling will be faster.
+
+Reactions are the total number of reactions that the comment gets, a finer subdivision in types of reactions is not implemented.
+
 
 # TODO
 ## Idea Brainstorm
@@ -165,12 +196,12 @@ Make sure that the `page` option is a proper post link, that begins with the pag
 * ~~write appropriate recursive functions in parse_page~~
 
 ~~Retrieve CSV timely ordered:~~
-* ~~Implement synchronous crawling ~~
+* ~~Implement synchronous crawling~~
 
 ~~Comments and commentators are not parsed:~~
-* ~~write a spyder that crawls all the comments from a given post ~~
-* scrape reactions from comments
-* add features representing connections between commentators (-> reply-to, <- replied-to)
+* ~~write a spider that crawls all the comments from a given post~~
+* ~~scrape total number of reactions from comments~~
+* ~~add features representing connections between commentators (-> reply-to)~~
 
 The number of shares is not retrieved, it is not available in `mbasic.facebook.com`. Also the number of comments field only counts direct comments and not reply comments, because that's how mbasic works. To fix both of these issues:
 * extract URL of post and use m.facebook.com to retrieve these data
