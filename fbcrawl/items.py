@@ -129,7 +129,7 @@ def parse_date(init_date,loader_context):
                 year = int(date[2])
                 return datetime(year,month,day).date()     
             #9 ore fa
-            elif date[0].isdigit() and date[1] == 'ore':
+            elif date[0].isdigit() and date[1][:2] == 'or':
                 if int(str(datetime.now().time()).split(sep=':')[0]) - int(date[0]) >= 0:
                     return datetime(year,month,day).date()
                 #9 ore fa (ieri)
@@ -137,6 +137,10 @@ def parse_date(init_date,loader_context):
                     day = int(str(datetime.now().date()-timedelta(1)).split(sep='-')[2])
                     month = int(str(datetime.now().date()-timedelta(1)).split(sep='-')[1])
                     return datetime(year,month,day).date()   
+            #7 minuti fa
+            elif date[0].isdigit() and date[1][:3] == 'min':
+                return datetime(year,month,day).date()    
+            
             #ieri alle 20:45            
             elif date[0].lower() == 'ieri' and date[1] == 'alle':
                 day = int(str(datetime.now().date()-timedelta(1)).split(sep='-')[2])
