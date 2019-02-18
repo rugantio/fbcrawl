@@ -2,106 +2,134 @@ import scrapy
 
 from scrapy.loader import ItemLoader
 from scrapy.http import FormRequest
-from fbcrawl.items import FbcrawlItem
+from fbcrawl.spiders.fbcrawl import FacebookSpider
+from fbcrawl.items import CommentsItem
 
-class FacebookSpider(scrapy.Spider):
+
+class CommentsSpider(FacebookSpider):
     """
-    Parse FB comments, given a page (needs credentials)
+    Parse FB comments, given a post (needs credentials)
     """    
     name = "comments"
+    custom_settings = {
+        'FEED_EXPORT_FIELDS': ['source','reply_to','date','text', \
+                               'reactions','likes','ahah','love','wow', \
+                               'sigh','grrr','url']
+    }
 
-    def __init__(self, email='', password='', page='', **kwargs):
-        super(FacebookSpider, self).__init__(**kwargs)
-    
-        if not email or not password:
-            raise ValueError("You need to provide valid email and password!")
-        else:
-            self.email = email
-            self.password = password
-            
-        if not page:
-            raise ValueError("You need to provide a valid page name to crawl!")
-        else:
-            self.page = page
-            
-        self.start_urls = ['https://mbasic.facebook.com']    
-
-
-    def parse(self, response):
-        return FormRequest.from_response(
-                response,
-                formxpath='//form[contains(@action, "login")]',
-                formdata={'email': self.email,'pass': self.password},
-                callback=self.parse_home
-        )
-  
-    def parse_home(self, response):
-        '''Parse user news feed page'''
-        if response.css('#approvals_code'):
-            # Handle 'Approvals Code' checkpoint (ask user to enter code).
-            if not self.code:
-                # Show facebook messages via logs
-                # and request user for approval code.
-                message = response.css('._50f4::text').extract()[0]
-                self.log(message)
-                message = response.css('._3-8y._50f4').xpath('string()').extract()[0]
-                self.log(message)
-                self.code = input('Enter the code: ')
-            self.code = str(self.code)
-            if not (self.code and self.code.isdigit()):
-                self.log('Bad approvals code detected.')
-                return
-            return FormRequest.from_response(
-                response,
-                formdata={'approvals_code': self.code},
-                callback=self.parse_home,
-            )
-        elif response.xpath("//div/input[@value='Ok' and @type='submit']"):
-            # Handle 'Save Browser' checkpoint.
-            return FormRequest.from_response(
-                response,
-                formdata={'name_action_selected': 'dont_save'},
-                callback=self.parse_home,
-                dont_filter=True,
-            )
-        elif response.css('button#checkpointSubmitButton'):
-            # Handle 'Someone tried to log into your account' warning.
-            return FormRequest.from_response(
-                response, callback=self.parse_home, dont_filter=True,)
-        # Else go to the user profile.
-        href = response.urljoin(self.page)
-        self.logger.info('Parse function called on %s', href)
-        return scrapy.Request(
-            url=href,
-            callback=self.parse_page,
-        )
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args,**kwargs)
 
     def parse_page(self, response):
-        #answer from page
-        for risposta in response.xpath('./div[string-length(@class) = 5 and count(@id)=1 and contains("0123456789", substring(@id,1,1))]'):            
-#            resp = ItemLoader(item=FbcrawlItem(),selector=risposta)
-            rispostina = risposta.xpath('./a[@href and text()="Altro"]/@href')
-            risp = response.urljoin(rispostina[0].extract())
-            yield scrapy.Request(risp, callback=self.parse_rispostina)
-        
-
-#        for i in range(len(rispostina)):
-#            risp = response.urljoin(rispostina[i].extract())
-#
-#        for post in response.xpath('//div[string-length(@class) = 2 and count(@id)=1 and contains("0123456789", substring(@id,1,1))]'): #select all posts            
-#            new = ItemLoader(item=FbcrawlItem(),selector=post)
-#            new.add_xpath('source', "./div/h3/a/text()")
-#            new.add_xpath('text',"./div[1]/div[1]/text()")            
-#            yield new.load_item()          
-#
-#        next_page = response.xpath("//div[contains(@id,'see_next')]/a/@href")
-#        if len(next_page) > 0:
-#            next_page = response.urljoin(next_page[0].extract())
-#            yield scrapy.Request(next_page, callback=self.parse_page)
-
-    def parse_rispostina(self,response):
-        for daje in response.xpath("//div[contains(@id,'root')]/div/div/div"): #select all posts                                
-            new = ItemLoader(item=FbcrawlItem(),selector=daje)
-            new.add_xpath('source', ".//h3/a/text()")#| ./div/div/h3/a/text()")             
-            new.add_xpath('text',".//span[not(contains(text(),' · ')) and not(contains(text(),'Visualizza'))]/text() | .//div/text()")
-            yield new.load_item()
+        '''
+        parse page does multiple things:
+            1) loads replied-to-comments page one-by-one (for DFS)
+            2) gets common not-replied-to comments
+        '''
+        #loads replied-to comments pages
+        path = './/div[string-length(@class) = 2 and count(@id)=1 and contains("0123456789", substring(@id,1,1)) and .//div[contains(@id,"comment_replies")]]'  + '['+ str(response.meta['index']) + ']'
+        for reply in response.xpath(path):
+            source = reply.xpath('.//h3/a/text()').extract()
+            answer = reply.xpath('.//a[contains(@href,"repl")]/@href').extract()
+            ans = response.urljoin(answer[::-1][0])
+            self.logger.info('Nested comment at page {}'.format(ans))
+            yield scrapy.Request(ans,
+                                 callback=self.parse_reply,
+                                 meta={'reply_to':source,
+                                       'url':response.url,
+                                       'index':response.meta['index'],
+                                       'flag':'init'})
+        #loads regular comments     
+        if not response.xpath(path):
+            path2 = './/div[string-length(@class) = 2 and count(@id)=1 and contains("0123456789", substring(@id,1,1)) and not(.//div[contains(@id,"comment_replies")])]'
+            for reply in response.xpath(path2):
+                new = ItemLoader(item=CommentsItem(),selector=reply)
+                new.context['lang'] = self.lang           
+                new.add_xpath('source','.//h3/a/text()')  
+                new.add_xpath('text','.//div[h3]/div[1]//text()')
+                new.add_xpath('date','.//abbr/text()')
+                yield new.load_item()
+#            
+#        #previous comments
+        if not response.xpath(path) and not response.xpath(path2):
+            for next_page in response.xpath('.//div[contains(@id,"see_next")]'):
+                new_page = next_page.xpath('.//@href').extract()
+                new_page = response.urljoin(new_page[0])
+                self.logger.info('New page to be crawled {}'.format(new_page))
+                yield scrapy.Request(new_page,
+                                     callback=self.parse_page,
+                                     meta={'index':1})        
+#        
+    def parse_reply(self,response):
+        '''
+        parse reply to comments, root comment is added if flag
+        '''
+        if response.meta['flag'] == 'init':
+            #parse root comment
+            for root in response.xpath('//div[contains(@id,"root")]/div/div/div[count(@id)!=1 and contains("0123456789", substring(@id,1,1))]'): 
+                new = ItemLoader(item=CommentsItem(),selector=root)
+                new.context['lang'] = self.lang           
+                new.add_xpath('source', './/h3/a/text()')
+                new.add_value('reply_to','ROOT')
+                new.add_xpath('text','.//div[1]//text()')
+                new.add_xpath('date','.//abbr/text()')
+                new.add_value('url',response.url)
+                yield new.load_item()
+            #parse all replies in the page
+            for reply in response.xpath('//div[contains(@id,"root")]/div/div/div[count(@id)=1 and contains("0123456789", substring(@id,1,1))]'): 
+                new = ItemLoader(item=CommentsItem(),selector=reply)
+                new.context['lang'] = self.lang           
+                new.add_xpath('source', './/h3/a/text()')
+                new.add_value('reply_to',response.meta['reply_to'])
+                new.add_xpath('text','.//div[h3]/div[1]//text()')
+                new.add_xpath('date','.//abbr/text()')
+                new.add_value('url',response.url)   
+                yield new.load_item()
+                
+            back = response.xpath('//div[contains(@id,"comment_replies_more_1")]/a/@href').extract()
+            if back:
+                self.logger.info('Back found, trying to go back')
+                back_page = response.urljoin(back[0])
+                yield scrapy.Request(back_page, 
+                                     callback=self.parse_reply,
+                                     priority=100,
+                                     meta={'reply_to':response.meta['reply_to'],
+                                           'flag':'back',
+                                           'url':response.meta['url'],
+                                           'index':response.meta['index']})
+            else:
+                next_reply = response.meta['url']
+                self.logger.info('Nested comments crawl finished, heading to home page: {}'.format(response.meta['url']))
+                yield scrapy.Request(next_reply, dont_filter=True,
+                                     callback=self.parse_page,
+                                     meta={'index':response.meta['index']+1})
+                
+        elif response.meta['flag'] == 'back':
+            #parse all comments
+            for reply in response.xpath('//div[contains(@id,"root")]/div/div/div[count(@id)=1 and contains("0123456789", substring(@id,1,1))]'): 
+                new = ItemLoader(item=CommentsItem(),selector=reply)
+                new.context['lang'] = self.lang           
+                new.add_xpath('source', './/h3/a/text()')
+                new.add_value('reply_to',response.meta['reply_to'])
+                new.add_xpath('text','.//div[h3]/div[1]//text()')
+                new.add_xpath('date','.//abbr/text()')
+                new.add_value('url',response.url)   
+                yield new.load_item()
+            #keep going backwards
+            back = response.xpath('//div[contains(@id,"comment_replies_more_1")]/a/@href').extract()
+            self.logger.info('Back found, trying to go back')
+            if back:
+                back_page = response.urljoin(back[0])
+                yield scrapy.Request(back_page, 
+                                     callback=self.parse_reply,
+                                     priority=100,
+                                     meta={'reply_to':response.meta['reply_to'],
+                                           'flag':'back',
+                                           'url':response.meta['url'],
+                                           'index':response.meta['index']})
+            else:
+                next_reply = response.meta['url']
+                self.logger.info('Nested comments crawl finished, heading to home page: {}'.format(response.meta['url']))
+                yield scrapy.Request(next_reply, dont_filter=True,
+                                     callback=self.parse_page,
+                                     meta={'index':response.meta['index']+1})

@@ -127,7 +127,40 @@ def parse_date(init_date,loader_context):
                 day = int(date[0])
                 month = months[date[1]]
                 year = int(date[2])
-                return datetime(year,month,day).date()                  
+                return datetime(year,month,day).date()     
+            #9 ore fa
+            elif date[0].isdigit() and date[1] == 'ore':
+                if int(str(datetime.now().time()).split(sep=':')[0]) - int(date[0]) >= 0:
+                    return datetime(year,month,day).date()
+                #9 ore fa (ieri)
+                else:
+                    day = int(str(datetime.now().date()-timedelta(1)).split(sep='-')[2])
+                    month = int(str(datetime.now().date()-timedelta(1)).split(sep='-')[1])
+                    return datetime(year,month,day).date()   
+            #ieri alle 20:45            
+            elif date[0].lower() == 'ieri' and date[1] == 'alle':
+                day = int(str(datetime.now().date()-timedelta(1)).split(sep='-')[2])
+                month = int(str(datetime.now().date()-timedelta(1)).split(sep='-')[1])
+                return datetime(year,month,day).date()               
+            #oggi alle 11:11            
+            elif date[0].lower() == 'oggi' and date[1] == 'alle':
+                return datetime(year,month,day).date()               
+            #lunedì alle 12:34
+            elif date[0].isalpha() and date[1] == 'alle':
+                today = datetime.now().weekday() #today as a weekday
+                weekday = giorni[date[0].lower()]   #day to be match as number weekday
+                #weekday is chronologically always lower than day
+                delta = today - weekday   
+                if delta >= 0:
+                    day = int(str(datetime.now().date()-timedelta(delta)).split(sep='-')[2])
+                    month = int(str(datetime.now().date()-timedelta(delta)).split(sep='-')[1])
+                    return datetime(year,month,day).date()
+                #lunedì = 0 sabato = 6, mar 1 ven 5
+                else:
+                    delta += 8
+                    day = int(str(datetime.now().date()-timedelta(delta)).split(sep='-')[2])
+                    month = int(str(datetime.now().date()-timedelta(delta)).split(sep='-')[1])
+                    return datetime(year,month,day).date()
             #parsing failed
             else:
                 return date
@@ -427,9 +460,7 @@ def url_strip(url):
     
 
 class FbcrawlItem(scrapy.Item):
-    source = scrapy.Field( 
-        output_processor=TakeFirst()
-    )   
+    source = scrapy.Field()   
     date = scrapy.Field(      # when was the post published
         input_processor=TakeFirst(),
         output_processor=parse_date
@@ -440,6 +471,32 @@ class FbcrawlItem(scrapy.Item):
     comments = scrapy.Field(
         output_processor=comments_strip
     )                                       
+    reactions = scrapy.Field(
+        output_processor=reactions_strip
+    )                  # num of reactions
+    likes = scrapy.Field(
+        output_processor=reactions_strip
+    )                      
+    ahah = scrapy.Field()                      
+    love = scrapy.Field()                      
+    wow = scrapy.Field()                      
+    sigh = scrapy.Field()                      
+    grrr = scrapy.Field()                      
+    share = scrapy.Field()                      # num of shares
+    url = scrapy.Field(
+        output_processor=url_strip
+    )
+    shared_from = scrapy.Field()
+
+class CommentsItem(scrapy.Item):
+    source = scrapy.Field()   
+    reply_to=scrapy.Field()
+    date = scrapy.Field(      # when was the post published
+        output_processor=parse_date
+    )       
+    text = scrapy.Field(
+        output_processor=Join(separator=u'')
+    )                       # full text of the post
     reactions = scrapy.Field(
         output_processor=reactions_strip
     )                  # num of reactions

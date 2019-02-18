@@ -10,7 +10,6 @@ class FacebookSpider(scrapy.Spider):
     Parse FB pages (needs credentials)
     """    
     name = "fb"
-    is_debug = True
     custom_settings = {
         'FEED_EXPORT_FIELDS': ['source','shared_from','date','text', \
                                'reactions','likes','ahah','love','wow', \
@@ -21,7 +20,7 @@ class FacebookSpider(scrapy.Spider):
         #turn off annoying logging, set LOG_LEVEL=DEBUG in settings.py to see more logs
         logger = logging.getLogger('scrapy.middleware')
         logger.setLevel(logging.WARNING)
-        super().__init__(**kwargs)
+        super().__init__(*args,**kwargs)
         
         #email & pass need to be passed as attributes!
         if 'email' not in kwargs or 'password' not in kwargs:
@@ -121,7 +120,7 @@ class FacebookSpider(scrapy.Spider):
                 self.lang = 'it'
             elif response.xpath("//input[@placeholder='Pesquisa no Facebook']"):
                 self.logger.info('Language recognized: lang="pt"')
-                self.lang = 'pt'                
+                self.lang = 'pt'
             else:
                 raise AttributeError('Language not recognized\n'
                                      'Change your interface lang from facebook ' 
@@ -130,7 +129,7 @@ class FacebookSpider(scrapy.Spider):
         #navigate to provided page
         href = response.urljoin(self.page)
         self.logger.info('Scraping facebook page {}'.format(href))
-        return scrapy.Request(url=href,callback=self.parse_page)
+        return scrapy.Request(url=href,callback=self.parse_page,meta={'index':1})
 
     def parse_page(self, response):
         '''
