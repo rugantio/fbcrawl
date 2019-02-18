@@ -513,7 +513,5 @@ class CommentsItem(scrapy.Item):
     sigh = scrapy.Field()                      
     grrr = scrapy.Field()                      
     share = scrapy.Field()                      # num of shares
-    url = scrapy.Field(
-        output_processor=url_strip
-    )
+    url = scrapy.Field()
     shared_from = scrapy.Field()

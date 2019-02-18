@@ -11,9 +11,8 @@ class CommentsSpider(FacebookSpider):
     """    
     name = "comments"
     custom_settings = {
-        'FEED_EXPORT_FIELDS': ['source','reply_to','date','text', \
-                               'reactions','likes','ahah','love','wow', \
-                               'sigh','grrr','url'],
+        'FEED_EXPORT_FIELDS': ['source','reply_to','date','reactions','text', \
+                               'url'],
         'DUPEFILTER_CLASS' : 'scrapy.dupefilters.BaseDupeFilter',
         'CONCURRENT_REQUESTS':1, 
     }
@@ -25,7 +24,7 @@ class CommentsSpider(FacebookSpider):
         '''
         parse page does multiple things:
             1) loads replied-to-comments page one-by-one (for DFS)
-            2) gets common not-replied-to comments
+            2) retrieves not-replied-to comments
         '''
         #loads replied-to comments pages
         path = './/div[string-length(@class) = 2 and count(@id)=1 and contains("0123456789", substring(@id,1,1)) and .//div[contains(@id,"comment_replies")]]'  + '['+ str(response.meta['index']) + ']'
@@ -43,7 +42,6 @@ class CommentsSpider(FacebookSpider):
         #loads regular comments     
         if not response.xpath(path):
             path2 = './/div[string-length(@class) = 2 and count(@id)=1 and contains("0123456789", substring(@id,1,1)) and not(.//div[contains(@id,"comment_replies")])]'
-            
             for i,reply in enumerate(response.xpath(path2)):
                 self.logger.info('{} regular comment @ page {}'.format(i,response.url))
                 new = ItemLoader(item=CommentsItem(),selector=reply)
@@ -51,6 +49,7 @@ class CommentsSpider(FacebookSpider):
                 new.add_xpath('source','.//h3/a/text()')  
                 new.add_xpath('text','.//div[h3]/div[1]//text()')
                 new.add_xpath('date','.//abbr/text()')
+                new.add_xpath('reactions','.//a[contains(@href,"reaction/profile")]//text()')
                 new.add_value('url',response.url)
                 yield new.load_item()
             
@@ -77,6 +76,7 @@ class CommentsSpider(FacebookSpider):
                 new.add_value('reply_to','ROOT')
                 new.add_xpath('text','.//div[1]//text()')
                 new.add_xpath('date','.//abbr/text()')
+                new.add_xpath('reactions','.//a[contains(@href,"reaction/profile")]//text()')
                 new.add_value('url',response.url)
                 yield new.load_item()
             #parse all replies in the page
@@ -87,6 +87,7 @@ class CommentsSpider(FacebookSpider):
                 new.add_value('reply_to',response.meta['reply_to'])
                 new.add_xpath('text','.//div[h3]/div[1]//text()')
                 new.add_xpath('date','.//abbr/text()')
+                new.add_xpath('reactions','.//a[contains(@href,"reaction/profile")]//text()')
                 new.add_value('url',response.url)   
                 yield new.load_item()
                 
@@ -117,6 +118,7 @@ class CommentsSpider(FacebookSpider):
                 new.add_value('reply_to',response.meta['reply_to'])
                 new.add_xpath('text','.//div[h3]/div[1]//text()')
                 new.add_xpath('date','.//abbr/text()')
+                new.add_xpath('reactions','.//a[contains(@href,"reaction/profile")]//text()')
                 new.add_value('url',response.url)   
                 yield new.load_item()
             #keep going backwards

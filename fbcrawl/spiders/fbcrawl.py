@@ -213,4 +213,4 @@ class FacebookSpider(scrapy.Spider):
         new.add_xpath('wow',"//a[contains(@href,'reaction_type=3')]/span/text()")
         new.add_xpath('sigh',"//a[contains(@href,'reaction_type=7')]/span/text()")
         new.add_xpath('grrr',"//a[contains(@href,'reaction_type=8')]/span/text()")        
-        yield new.load_item()
+        yield new.load_item()       
