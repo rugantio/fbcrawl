@@ -3,7 +3,9 @@ import logging
 
 from scrapy.loader import ItemLoader
 from scrapy.http import FormRequest
-from fbcrawl.items import FbcrawlItem
+from scrapy.exceptions import CloseSpider
+from fbcrawl.items import FbcrawlItem, parse_date2
+from datetime import datetime
 
 class FacebookSpider(scrapy.Spider):
     '''
@@ -44,16 +46,15 @@ class FacebookSpider(scrapy.Spider):
             self.logger.info('Page attribute provided, scraping "{}"'.format(self.page))
         else:
             self.logger.info('Page attribute provided, scraping "{}"'.format(self.page))
-        
-        #parse year
-        if 'year' not in kwargs:
-            self.year = 2018
-            self.logger.info('Year attribute not found, set scraping back to {}'.format(self.year))
+       
+        #parse date
+        if 'date' not in kwargs:
+            self.date = datetime(2014,1,1)
+            self.year = 2014
         else:
-            assert int(self.year) <= 2019 and int(self.year) >= 2006,\
-            'Year must be an int number 2006 <= year <= 2019'
-            self.year = int(self.year)    #arguments are passed as strings
-            self.logger.info('Year attribute found, set scraping back to {}'.format(self.year))
+            print(type(kwargs['date']))
+            self.date = datetime.strptime(kwargs['date'],'%Y-%m-%d')
+            self.year = datetime.now().year - 1
 
         #parse lang, if not provided (but is supported) it will be guessed in parse_home
         if 'lang' not in kwargs:
@@ -68,7 +69,7 @@ class FacebookSpider(scrapy.Spider):
             self.logger.info('Currently supported languages are: "en", "es", "fr", "it", "pt"')                             
             self.logger.info('Change your interface lang from facebook settings and try again')
             raise AttributeError('Language provided not currently supported')
-
+            
         #current year, this variable is needed for parse_page recursion
         self.k = 2019
         #count number of posts, used to prioritized parsing and correctly insert in the csv
@@ -137,10 +138,19 @@ class FacebookSpider(scrapy.Spider):
         Then ask recursively for another page.
         '''
         #select all posts
-        for post in response.xpath("//div[contains(@data-ft,'top_level_post_id')]"):            
+        for post in response.xpath("//div[contains(@data-ft,'top_level_post_id')]"):     
+            many_features = post.xpath('./@data-ft').get()
+            date = []
+            date.append(many_features)
+            date = parse_date2(date)
+            current_date = datetime.strptime(date,'%Y-%m-%d %H:%M:%S')
+
+            if self.date > current_date:
+                raise CloseSpider('Reached date: {}'.format(self.date))
             new = ItemLoader(item=FbcrawlItem(),selector=post)
             self.logger.info('Parsing post n = {}'.format(abs(self.count)))
-            new.add_xpath('comments', './div[2]/div[2]/a[1]/text()')        
+            new.add_xpath('comments', './div[2]/div[2]/a[1]/text()')     
+            new.add_xpath('date','./@data-ft')
             new.add_xpath('url', ".//a[contains(@href,'footer')]/@href")
 
             #page_url #new.add_value('url',response.url)
@@ -151,7 +161,7 @@ class FacebookSpider(scrapy.Spider):
             yield scrapy.Request(temp_post, self.parse_post, priority = self.count, meta={'item':new})       
 
         #load following page, try to click on "more"
-        #after few pages have gone scraped, the "more" link disappears 
+        #after few pages have been scraped, the "more" link might disappears 
         #if not present look for the highest year not parsed yet, click once 
         #and keep looking for "more"
         new_page = response.xpath("//div[2]/a[contains(@href,'timestart=') and not(contains(text(),'ent')) and not(contains(text(),number()))]/@href").extract()      
@@ -197,7 +207,7 @@ class FacebookSpider(scrapy.Spider):
         new = ItemLoader(item=FbcrawlItem(),response=response,parent=response.meta['item'])
         new.add_xpath('source', "//td/div/h3/strong/a/text() | //span/strong/a/text() | //div/div/div/a[contains(@href,'post_id')]/strong/text()")
         new.add_xpath('shared_from','//div[contains(@data-ft,"top_level_post_id") and contains(@data-ft,\'"isShare":1\')]/div/div[3]//strong/a/text()')
-        new.add_xpath('date','//div/div/abbr/text()')
+     #   new.add_xpath('date','//div/div/abbr/text()')
         new.add_xpath('text','//div[@data-ft]//p//text() | //div[@data-ft]/div[@class]/div[@class]/text()')
         new.add_xpath('reactions',"//a[contains(@href,'reaction/profile')]/div/div/text()")  
         

@@ -462,12 +462,33 @@ def url_strip(url):
             else:
                 return fullurl
     
+def parse_date2(date):
+    import json
+        
+    d = json.loads(date[0]) #nested dict of features
+    flat_d = dict() #only retain 'leaves' of d tree
+    
+    def recursive_items(dictionary):
+        '''
+        Get most nested key:value pair of nested dict
+        '''
+        for key, value in dictionary.items():
+            if type(value) is dict:
+                yield from recursive_items(value)
+            else:
+                yield (key, value)
+
+    for key, value in recursive_items(d):
+        flat_d[key] = value
+        
+    return str(datetime.fromtimestamp(flat_d['publish_time']) - timedelta(hours=5))  
+    
+    
 
 class FbcrawlItem(scrapy.Item):
     source = scrapy.Field()   
     date = scrapy.Field(      # when was the post published
-        input_processor=TakeFirst(),
-        output_processor=parse_date
+        output_processor=parse_date2
     )       
     text = scrapy.Field(
         output_processor=Join(separator=u'')
