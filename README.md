@@ -120,18 +120,18 @@ Scrapy's default behavior is to follow robots.txt guidelines, so we need to disa
 
 Make sure that scrapy is installed, and clone this repository. Navigate through the project's top level directory and launch scrapy with:
 ```
-scrapy crawl fb -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="NAMEOFTHEPAGETOCRAWL" -a year="2015" -a lang="it" -o DUMPFILE.csv
+scrapy crawl fb -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="NAMEOFTHEPAGETOCRAWL" -a date="2018-01-01" -a lang="it" -o DUMPFILE.csv
 
 ```
 For example, let's say I want to crawl Donald Trump's page:
 ```
-scrapy crawl fb -a email="barackobama@gmail.com" -a password="10wnyu31" -a page="DonaldTrump" -a year="2015" -a lang="it" -o Trump.csv
+scrapy crawl fb -a email="barackobama@gmail.com" -a password="10wnyu31" -a page="DonaldTrump" -a date="2018-01-01" -a lang="it" -o Trump.csv
 ```
 The **email** and **password** are valid fb credentials; the login might be cumbersome and some exceptions are handled, like the "save-device" checkpoint.
 
 The **page** parameter is the name of the page, although full links (with facebook domain inside) are also understood. 
 
-The **year** parameter tells fbcrawl when to stop going back in time; it's optional, the default behavior is to stop at the beginning of 2018.
+The **date** parameter tells fbcrawl when to stop going back in time; it's optional, the default behavior is to crawl everything available, up to the beginning of 2014.
 
 The **lang** parameter is of recent introduction and it is the language of facebook interface. If the language is not supported, the crawler will **fail**, in this case change your language interface from within facebook (settings -> language). The crawler has support for just a handful of languages at the moment: italian ("it") is the original and best supported, it will return datetime format for every post, english (en), spanish (es), french(fr), portuguese (pt) will also work for crawling but the timestamp of the post will not be in year-month-day format. If not provided, the language interface will be inferred and if it's supported, will be chosen accordingly.
 
