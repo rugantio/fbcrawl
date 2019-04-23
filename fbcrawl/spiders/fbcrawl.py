@@ -6,10 +6,10 @@ from scrapy.http import FormRequest
 from fbcrawl.items import FbcrawlItem
 
 class FacebookSpider(scrapy.Spider):
-    """
+    '''
     Parse FB pages (needs credentials)
-    """    
-    name = "fb"
+    '''    
+    name = 'fb'
     custom_settings = {
         'FEED_EXPORT_FIELDS': ['source','shared_from','date','text', \
                                'reactions','likes','ahah','love','wow', \
