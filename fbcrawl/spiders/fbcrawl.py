@@ -66,7 +66,7 @@ class FacebookSpider(scrapy.Spider):
         else:
             self.logger.info('Lang "{}" not currently supported'.format(self.lang))                             
             self.logger.info('Currently supported languages are: "en", "es", "fr", "it", "pt"')                             
-            self.logger.info('Change your interface lang from facebook and try again')
+            self.logger.info('Change your interface lang from facebook settings and try again')
             raise AttributeError('Language provided not currently supported')
 
         #current year, this variable is needed for parse_page recursion
@@ -85,7 +85,7 @@ class FacebookSpider(scrapy.Spider):
                 formxpath='//form[contains(@action, "login")]',
                 formdata={'email': self.email,'pass': self.password},
                 callback=self.parse_home
-        )
+                )
   
     def parse_home(self, response):
         '''
@@ -140,7 +140,7 @@ class FacebookSpider(scrapy.Spider):
         for post in response.xpath("//div[contains(@data-ft,'top_level_post_id')]"):            
             new = ItemLoader(item=FbcrawlItem(),selector=post)
             self.logger.info('Parsing post n = {}'.format(abs(self.count)))
-            new.add_xpath('comments', "./div[2]/div[2]/a[1]/text()")        
+            new.add_xpath('comments', './div[2]/div[2]/a[1]/text()')        
             new.add_xpath('url', ".//a[contains(@href,'footer')]/@href")
 
             #page_url #new.add_value('url',response.url)
@@ -150,9 +150,10 @@ class FacebookSpider(scrapy.Spider):
             self.count -= 1
             yield scrapy.Request(temp_post, self.parse_post, priority = self.count, meta={'item':new})       
 
-        #load following page
-        #tries to click on "more", otherwise it looks for the appropriate
-        #year for 1-click only and proceeds to click on others
+        #load following page, try to click on "more"
+        #after few pages have gone scraped, the "more" link disappears 
+        #if not present look for the highest year not parsed yet, click once 
+        #and keep looking for "more"
         new_page = response.xpath("//div[2]/a[contains(@href,'timestart=') and not(contains(text(),'ent')) and not(contains(text(),number()))]/@href").extract()      
         if not new_page: 
             if response.meta['flag'] == self.k and self.k >= self.year:                
@@ -165,7 +166,7 @@ class FacebookSpider(scrapy.Spider):
                     self.logger.info('Everything OK, new flag: {}'.format(self.k))                                
                     yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k})
                 else:
-                    while not new_page: #sometimes the years are skipped 
+                    while not new_page: #sometimes the years are skipped this handles small year gaps
                         self.logger.info('XPATH not found for year {}'.format(self.k-1))
                         self.k -= 1
                         self.logger.info('Trying with previous year, flag={}'.format(self.k))
