@@ -507,11 +507,11 @@ class CommentsItem(scrapy.Item):
     likes = scrapy.Field(
         output_processor=reactions_strip
     )                      
-    ahah = scrapy.Field()                      
-    love = scrapy.Field()                      
-    wow = scrapy.Field()                      
-    sigh = scrapy.Field()                      
-    grrr = scrapy.Field()                      
-    share = scrapy.Field()                      # num of shares
+    source_url = scrapy.Field()                      
     url = scrapy.Field()
-    shared_from = scrapy.Field()
+    #ahah = scrapy.Field()                      
+    #love = scrapy.Field()                      
+    #wow = scrapy.Field()                      
+    #sigh = scrapy.Field()                      
+    #grrr = scrapy.Field()                      
+    #share = scrapy.Field()                      # num of shares

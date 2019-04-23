@@ -12,7 +12,7 @@ class CommentsSpider(FacebookSpider):
     name = "comments"
     custom_settings = {
         'FEED_EXPORT_FIELDS': ['source','reply_to','date','reactions','text', \
-                               'url'],
+                               'source_url','url'],
         'DUPEFILTER_CLASS' : 'scrapy.dupefilters.BaseDupeFilter',
         'CONCURRENT_REQUESTS':1, 
     }
@@ -53,6 +53,7 @@ class CommentsSpider(FacebookSpider):
                 new = ItemLoader(item=CommentsItem(),selector=reply)
                 new.context['lang'] = self.lang           
                 new.add_xpath('source','.//h3/a/text()')  
+                new.add_xpath('source_url','.//h3/a/@href')   
                 new.add_xpath('text','.//div[h3]/div[1]//text()')
                 new.add_xpath('date','.//abbr/text()')
                 new.add_xpath('reactions','.//a[contains(@href,"reaction/profile")]//text()')
@@ -92,7 +93,8 @@ class CommentsSpider(FacebookSpider):
             for root in response.xpath('//div[contains(@id,"root")]/div/div/div[count(@id)!=1 and contains("0123456789", substring(@id,1,1))]'): 
                 new = ItemLoader(item=CommentsItem(),selector=root)
                 new.context['lang'] = self.lang           
-                new.add_xpath('source', './/h3/a/text()')
+                new.add_xpath('source','.//h3/a/text()')  
+                new.add_xpath('source_url','.//h3/a/@href') 
                 new.add_value('reply_to','ROOT')
                 new.add_xpath('text','.//div[1]//text()')
                 new.add_xpath('date','.//abbr/text()')
@@ -103,7 +105,8 @@ class CommentsSpider(FacebookSpider):
             for reply in response.xpath('//div[contains(@id,"root")]/div/div/div[count(@id)=1 and contains("0123456789", substring(@id,1,1))]'): 
                 new = ItemLoader(item=CommentsItem(),selector=reply)
                 new.context['lang'] = self.lang           
-                new.add_xpath('source', './/h3/a/text()')
+                new.add_xpath('source','.//h3/a/text()')  
+                new.add_xpath('source_url','.//h3/a/@href') 
                 new.add_value('reply_to',response.meta['reply_to'])
                 new.add_xpath('text','.//div[h3]/div[1]//text()')
                 new.add_xpath('date','.//abbr/text()')
@@ -137,7 +140,8 @@ class CommentsSpider(FacebookSpider):
             for reply in response.xpath('//div[contains(@id,"root")]/div/div/div[count(@id)=1 and contains("0123456789", substring(@id,1,1))]'): 
                 new = ItemLoader(item=CommentsItem(),selector=reply)
                 new.context['lang'] = self.lang           
-                new.add_xpath('source', './/h3/a/text()')
+                new.add_xpath('source','.//h3/a/text()')  
+                new.add_xpath('source_url','.//h3/a/@href') 
                 new.add_value('reply_to',response.meta['reply_to'])
                 new.add_xpath('text','.//div[h3]/div[1]//text()')
                 new.add_xpath('date','.//abbr/text()')
