@@ -483,6 +483,12 @@ def parse_date2(date):
         
     return str(datetime.fromtimestamp(flat_d['publish_time']) - timedelta(hours=5))  
     
+def id_strip(post_id):
+    import json
+        
+    d = json.loads(post_id[0]) #nested dict of features
+    return d['top_level_post_id']
+    
     
 
 class FbcrawlItem(scrapy.Item):
@@ -510,6 +516,9 @@ class FbcrawlItem(scrapy.Item):
     share = scrapy.Field()                      # num of shares
     url = scrapy.Field(
         output_processor=url_strip
+    )
+    post_id = scrapy.Field(
+        output_processor=id_strip
     )
     shared_from = scrapy.Field()
 

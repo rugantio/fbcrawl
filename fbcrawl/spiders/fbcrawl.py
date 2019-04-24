@@ -15,7 +15,7 @@ class FacebookSpider(scrapy.Spider):
     custom_settings = {
         'FEED_EXPORT_FIELDS': ['source','shared_from','date','text', \
                                'reactions','likes','ahah','love','wow', \
-                               'sigh','grrr','comments','url']
+                               'sigh','grrr','comments','post_id','url']
     }
     
     def __init__(self, *args, **kwargs):
@@ -151,6 +151,7 @@ class FacebookSpider(scrapy.Spider):
             self.logger.info('Parsing post n = {}'.format(abs(self.count)))
             new.add_xpath('comments', './div[2]/div[2]/a[1]/text()')     
             new.add_xpath('date','./@data-ft')
+            new.add_xpath('post_id','./@data-ft')
             new.add_xpath('url', ".//a[contains(@href,'footer')]/@href")
 
             #page_url #new.add_value('url',response.url)
