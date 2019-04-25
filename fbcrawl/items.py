@@ -485,10 +485,8 @@ def parse_date2(date):
     
 def id_strip(post_id):
     import json
-        
-    d = json.loads(post_id[0]) #nested dict of features
-    return d['top_level_post_id']
-    
+    d = json.loads(post_id[::-1][0]) #nested dict of features
+    return str(d['top_level_post_id'])
     
 
 class FbcrawlItem(scrapy.Item):

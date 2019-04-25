@@ -137,8 +137,13 @@ class FacebookSpider(scrapy.Spider):
         Parse the given page selecting the posts.
         Then ask recursively for another page.
         '''
+#        #open page in browser for debug
+#        from scrapy.utils.response import open_in_browser
+#        open_in_browser(response)
+    
         #select all posts
         for post in response.xpath("//div[contains(@data-ft,'top_level_post_id')]"):     
+ 
             many_features = post.xpath('./@data-ft').get()
             date = []
             date.append(many_features)
@@ -197,11 +202,11 @@ class FacebookSpider(scrapy.Spider):
         else:
             new_page = response.urljoin(new_page[0])
             if 'flag' in response.meta:
-                self.logger.info('Page scraped, click on more! flag = {}'.format(response.meta['flag']))
+                self.logger.info('Page scraped, click on more! new_page = {} flag = {}'.format(new_page,date))
                 yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':response.meta['flag']})
             else:
-                self.logger.info('FLAG DOES NOT ALWAYS REPRESENT ACTUAL YEAR')
-                self.logger.info('First page scraped, click on more! Flag not set, default flag = {}'.format(self.k))
+#                self.logger.info('FLAG DOES NOT ALWAYS REPRESENT ACTUAL YEAR')
+                self.logger.info('First page scraped, click on more {}! Flag not set, default flag = {}'.format(new_page,date))
                 yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k})
                 
     def parse_post(self,response):
