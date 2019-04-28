@@ -113,7 +113,7 @@ class FacebookSpider(scrapy.Spider):
             found = False
             for key,val in xUI_LANGUAGES_.items():
                  if response.xpath(val):
-                    self.logger.info(f'Language recognized: lang="[0]"',key)
+                    self.logger.info('Language recognized: lang="%s"' % key)
                     self.lang = key
                     found=True
                     break 
