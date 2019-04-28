@@ -3,6 +3,7 @@ import scrapy
 from scrapy.loader import ItemLoader
 from fbcrawl.spiders.fbcrawl import FacebookSpider
 from fbcrawl.items import CommentsItem
+from fbcrawl.spiders.assets.comments_consts import *
 
 
 class CommentsSpider(FacebookSpider):
@@ -30,12 +31,12 @@ class CommentsSpider(FacebookSpider):
         '''
         #load replied-to comments pages
         #select nested comment one-by-one matching with the index: response.meta['index']
-        path = './/div[string-length(@class) = 2 and count(@id)=1 and contains("0123456789", substring(@id,1,1)) and .//div[contains(@id,"comment_replies")]]'  + '['+ str(response.meta['index']) + ']'
+        path = xNESTED_COMMENT_['root'] % (str(response.meta['index']))
         group_flag = response.meta['group'] if 'group' in response.meta else None
 
         for reply in response.xpath(path):
-            source = reply.xpath('.//h3/a/text()').extract()
-            answer = reply.xpath('.//a[contains(@href,"repl")]/@href').extract()
+            source = reply.xpath( xNESTED_COMMENT_['attributes']['source'] ).extract()
+            answer = reply.xpath(xNESTED_COMMENT_['attributes']['answer']).extract()
             ans = response.urljoin(answer[::-1][0])
             self.logger.info('{} nested comment @ page {}'.format(str(response.meta['index']),ans))
             yield scrapy.Request(ans,
@@ -47,27 +48,27 @@ class CommentsSpider(FacebookSpider):
                                        'group':group_flag})
         #load regular comments     
         if not response.xpath(path): #prevents from exec
-            path2 = './/div[string-length(@class) = 2 and count(@id)=1 and contains("0123456789", substring(@id,1,1)) and not(.//div[contains(@id,"comment_replies")])]'
+            path2 = xREGULAR_COMMENT_['root']
             for i,reply in enumerate(response.xpath(path2)):
                 self.logger.info('{} regular comment @ page {}'.format(i,response.url))
                 new = ItemLoader(item=CommentsItem(),selector=reply)
                 new.context['lang'] = self.lang           
-                new.add_xpath('source','.//h3/a/text()')  
-                new.add_xpath('source_url','.//h3/a/@href')   
-                new.add_xpath('text','.//div[h3]/div[1]//text()')
-                new.add_xpath('date','.//abbr/text()')
-                new.add_xpath('reactions','.//a[contains(@href,"reaction/profile")]//text()')
+                new.add_xpath('source',xREGULAR_COMMENT_['attributes']['source'])  
+                new.add_xpath('source_url',xREGULAR_COMMENT_['attributes']['source_url'])   
+                new.add_xpath('text',xREGULAR_COMMENT_['attributes']['text'])
+                new.add_xpath('date',xREGULAR_COMMENT_['attributes']['date'])
+                new.add_xpath('reactions',xREGULAR_COMMENT_['attributes']['reactions'])
                 new.add_value('url',response.url)
                 yield new.load_item()
             
         #new comment page
         if not response.xpath(path):
             #for groups
-            next_xpath = './/div[contains(@id,"see_next")]'
-            prev_xpath = './/div[contains(@id,"see_prev")]'
+            next_xpath = xNEXT_COMMENTS_['root']
+            prev_xpath = xPREV_COMMENTS_DIV
             if not response.xpath(next_xpath) or group_flag == 1:
                 for next_page in response.xpath(prev_xpath):
-                    new_page = next_page.xpath('.//@href').extract()
+                    new_page = next_page.xpath(xNEXT_COMMENTS_['attributes']['rnew_pageoot']).extract()
                     new_page = response.urljoin(new_page[0])
                     self.logger.info('New page to be crawled {}'.format(new_page))
                     yield scrapy.Request(new_page,
@@ -90,26 +91,25 @@ class CommentsSpider(FacebookSpider):
         '''
         if response.meta['flag'] == 'init':
             #parse root comment
-            for root in response.xpath('//div[contains(@id,"root")]/div/div/div[count(@id)!=1 and contains("0123456789", substring(@id,1,1))]'): 
+            for root in response.xpath(xAll_ROOT_DIV): 
                 new = ItemLoader(item=CommentsItem(),selector=root)
                 new.context['lang'] = self.lang           
-                new.add_xpath('source','.//h3/a/text()')  
-                new.add_xpath('source_url','.//h3/a/@href') 
+                new.add_xpath('source',xREPLY_['attributes']['source'])  
+                new.add_xpath('source_url',xREPLY_['attributes']['source_url']) 
                 new.add_value('reply_to','ROOT')
-                new.add_xpath('text','.//div[1]//text()')
-                new.add_xpath('date','.//abbr/text()')
-                new.add_xpath('reactions','.//a[contains(@href,"reaction/profile")]//text()')
+                new.add_xpath('text',xREPLY_['attributes']['text_root'])
+                new.add_xpath('date',xREPLY_['attributes']['date'])
+                new.add_xpath('reactions',xREPLY_['attributes']['reactions'])
                 new.add_value('url',response.url)
                 yield new.load_item()
             #parse all replies in the page
-            for reply in response.xpath('//div[contains(@id,"root")]/div/div/div[count(@id)=1 and contains("0123456789", substring(@id,1,1))]'): 
+            for reply in response.xpath(xAll_REPLIES_DIV): 
                 new = ItemLoader(item=CommentsItem(),selector=reply)
-                new.context['lang'] = self.lang           
-                new.add_xpath('source','.//h3/a/text()')  
-                new.add_xpath('source_url','.//h3/a/@href') 
+                new.context['lang'] = self.lang   
+                new.add_xpath('source_url',xREPLY_['attributes']['source_url']) 
                 new.add_value('reply_to',response.meta['reply_to'])
-                new.add_xpath('text','.//div[h3]/div[1]//text()')
-                new.add_xpath('date','.//abbr/text()')
+                new.add_xpath('text',xREPLY_['attributes']['text_child'])
+                new.add_xpath('date',xREPLY_['attributes']['date'])
                 new.add_xpath('reactions','.//a[contains(@href,"reaction/profile")]//text()')
                 new.add_value('url',response.url)   
                 yield new.load_item()
@@ -140,12 +140,12 @@ class CommentsSpider(FacebookSpider):
             for reply in response.xpath('//div[contains(@id,"root")]/div/div/div[count(@id)=1 and contains("0123456789", substring(@id,1,1))]'): 
                 new = ItemLoader(item=CommentsItem(),selector=reply)
                 new.context['lang'] = self.lang           
-                new.add_xpath('source','.//h3/a/text()')  
-                new.add_xpath('source_url','.//h3/a/@href') 
+                new.add_xpath('source',xREPLY_['attributes']['source'])  
+                new.add_xpath('source_url',xREPLY_['attributes']['source_url']) 
                 new.add_value('reply_to',response.meta['reply_to'])
-                new.add_xpath('text','.//div[h3]/div[1]//text()')
-                new.add_xpath('date','.//abbr/text()')
-                new.add_xpath('reactions','.//a[contains(@href,"reaction/profile")]//text()')
+                new.add_xpath('text',xREPLY_['attributes']['text_child'])
+                new.add_xpath('date',xREPLY_['attributes']['date'])
+                new.add_xpath('reactions',xREPLY_['attributes']['reactions'])
                 new.add_value('url',response.url)   
                 yield new.load_item()
             #keep going backwards

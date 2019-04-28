@@ -6,7 +6,10 @@ from scrapy.http import FormRequest
 from scrapy.exceptions import CloseSpider
 from fbcrawl.items import FbcrawlItem, parse_date2
 from datetime import datetime
+from fbcrawl.spiders.assets.fbcrawl_consts import *
 
+
+    
 class FacebookSpider(scrapy.Spider):
     '''
     Parse FB pages (needs credentials)
@@ -83,7 +86,7 @@ class FacebookSpider(scrapy.Spider):
         '''
         return FormRequest.from_response(
                 response,
-                formxpath='//form[contains(@action, "login")]',
+                formxpath=xLOGIN_FORM,
                 formdata={'email': self.email,'pass': self.password},
                 callback=self.parse_home
                 )
@@ -96,7 +99,7 @@ class FacebookSpider(scrapy.Spider):
         3) Navigate to given page 
         '''
         #handle 'save-device' redirection
-        if response.xpath("//div/a[contains(@href,'save-device')]"):
+        if response.xpath(xSAVE_DEVICE_HYPERLINK):
             self.logger.info('Got stuck in "save-device" checkpoint')
             self.logger.info('I will now try to redirect to the correct page')
             return FormRequest.from_response(
@@ -107,23 +110,16 @@ class FacebookSpider(scrapy.Spider):
             
         #set language interface
         if self.lang == '_':
-            if response.xpath("//input[@placeholder='Search Facebook']"):
-                self.logger.info('Language recognized: lang="en"')
-                self.lang = 'en'
-            elif response.xpath("//input[@placeholder='Buscar en Facebook']"):
-                self.logger.info('Language recognized: lang="es"')
-                self.lang = 'es'
-            elif response.xpath("//input[@placeholder='Rechercher sur Facebook']"):
-                self.logger.info('Language recognized: lang="fr"')
-                self.lang = 'fr'
-            elif response.xpath("//input[@placeholder='Cerca su Facebook']"):
-                self.logger.info('Language recognized: lang="it"')
-                self.lang = 'it'
-            elif response.xpath("//input[@placeholder='Pesquisa no Facebook']"):
-                self.logger.info('Language recognized: lang="pt"')
-                self.lang = 'pt'
-            else:
-                raise AttributeError('Language not recognized\n'
+            found = False
+            for key,val in xUI_LANGUAGES_.items():
+                 if response.xpath(val):
+                    self.logger.info(f'Language recognized: lang="[0]"',key)
+                    self.lang = key
+                    found=True
+                    break 
+            
+            if not found:
+                    raise AttributeError('Language not recognized\n'
                                      'Change your interface lang from facebook ' 
                                      'and try again')
                                                                  
@@ -142,9 +138,9 @@ class FacebookSpider(scrapy.Spider):
 #        open_in_browser(response)
     
         #select all posts
-        for post in response.xpath("//div[contains(@data-ft,'top_level_post_id')]"):     
+        for post in response.xpath(xPOST_['root']):     
  
-            many_features = post.xpath('./@data-ft').get()
+            many_features = post.xpath(xPOST_['attributes']['many_features']).get()
             date = []
             date.append(many_features)
             date = parse_date2(date)
@@ -154,14 +150,14 @@ class FacebookSpider(scrapy.Spider):
                 raise CloseSpider('Reached date: {}'.format(self.date))
             new = ItemLoader(item=FbcrawlItem(),selector=post)
             self.logger.info('Parsing post n = {}'.format(abs(self.count)))
-            new.add_xpath('comments', './div[2]/div[2]/a[1]/text()')     
-            new.add_xpath('date','./@data-ft')
-            new.add_xpath('post_id','./@data-ft')
-            new.add_xpath('url', ".//a[contains(@href,'footer')]/@href")
+            new.add_xpath('comments', xPOST_['attributes']['comments'])     
+            new.add_xpath('date',xPOST_['attributes']['date'])
+            new.add_xpath('post_id',xPOST_['attributes']['post_id'])
+            new.add_xpath('url', xPOST_['attributes']['url'])
 
             #page_url #new.add_value('url',response.url)
             #returns full post-link in a list
-            post = post.xpath(".//a[contains(@href,'footer')]/@href").extract() 
+            post = post.xpath(xPOST_['attributes']['post-link']).extract() 
             temp_post = response.urljoin(post[0])
             self.count -= 1
             yield scrapy.Request(temp_post, self.parse_post, priority = self.count, meta={'item':new})       
@@ -170,11 +166,11 @@ class FacebookSpider(scrapy.Spider):
         #after few pages have been scraped, the "more" link might disappears 
         #if not present look for the highest year not parsed yet, click once 
         #and keep looking for "more"
-        new_page = response.xpath("//div[2]/a[contains(@href,'timestart=') and not(contains(text(),'ent')) and not(contains(text(),number()))]/@href").extract()      
+        new_page = response.xpath(xMORE_POSTS_HYPERLINK).extract()      
         if not new_page: 
             if response.meta['flag'] == self.k and self.k >= self.year:                
                 self.logger.info('There are no more, flag set at = {}'.format(self.k))
-                xpath = "//div/a[contains(@href,'time') and contains(text(),'" + str(self.k) + "')]/@href"
+                xpath = xYEAR_HYPERLINK % (str(self.k))
                 new_page = response.xpath(xpath).extract()
                 if new_page:
                     new_page = response.urljoin(new_page[0])
@@ -190,7 +186,7 @@ class FacebookSpider(scrapy.Spider):
                             self.logger.info('The previous year to crawl is less than the parameter year: {} < {}'.format(self.k,self.year))
                             self.logger.info('This is not handled well, please re-run with -a year="{}" or less'.format(self.k))
                             break                        
-                        xpath = "//div/a[contains(@href,'time') and contains(text(),'" + str(self.k) + "')]/@href"
+                        xpath = xYEAR_HYPERLINK % (str(self.k))
                         new_page = response.xpath(xpath).extract()
                     self.logger.info('New page found with flag {}'.format(self.k))
                     new_page = response.urljoin(new_page[0])
@@ -211,23 +207,23 @@ class FacebookSpider(scrapy.Spider):
                 
     def parse_post(self,response):
         new = ItemLoader(item=FbcrawlItem(),response=response,parent=response.meta['item'])
-        new.add_xpath('source', "//td/div/h3/strong/a/text() | //span/strong/a/text() | //div/div/div/a[contains(@href,'post_id')]/strong/text()")
-        new.add_xpath('shared_from','//div[contains(@data-ft,"top_level_post_id") and contains(@data-ft,\'"isShare":1\')]/div/div[3]//strong/a/text()')
+        new.add_xpath('source',xPOST_['attributes']['source'])
+        new.add_xpath('shared_from',xPOST_['attributes']['shared_from'])
      #   new.add_xpath('date','//div/div/abbr/text()')
-        new.add_xpath('text','//div[@data-ft]//p//text() | //div[@data-ft]/div[@class]/div[@class]/text()')
-        new.add_xpath('reactions',"//a[contains(@href,'reaction/profile')]/div/div/text()")  
+        new.add_xpath('text',xPOST_['attributes']['text'])
+        new.add_xpath('reactions',xPOST_['attributes']['reactions'])  
         
-        reactions = response.xpath("//div[contains(@id,'sentence')]/a[contains(@href,'reaction/profile')]/@href")
+        reactions = response.xpath(xREACTIONS_['root'])
         reactions = response.urljoin(reactions[0].extract())
         yield scrapy.Request(reactions, callback=self.parse_reactions, meta={'item':new})
         
     def parse_reactions(self,response):
         new = ItemLoader(item=FbcrawlItem(),response=response, parent=response.meta['item'])
         new.context['lang'] = self.lang           
-        new.add_xpath('likes',"//a[contains(@href,'reaction_type=1')]/span/text()")
-        new.add_xpath('ahah',"//a[contains(@href,'reaction_type=4')]/span/text()")
-        new.add_xpath('love',"//a[contains(@href,'reaction_type=2')]/span/text()")
-        new.add_xpath('wow',"//a[contains(@href,'reaction_type=3')]/span/text()")
-        new.add_xpath('sigh',"//a[contains(@href,'reaction_type=7')]/span/text()")
-        new.add_xpath('grrr',"//a[contains(@href,'reaction_type=8')]/span/text()")        
+        new.add_xpath('likes',xREACTIONS_['attributes']['likes'])
+        new.add_xpath('ahah',xREACTIONS_['attributes']['ahah'])
+        new.add_xpath('love',xREACTIONS_['attributes']['love'])
+        new.add_xpath('wow',xREACTIONS_['attributes']['wow'])
+        new.add_xpath('sigh',xREACTIONS_['attributes']['sigh'])
+        new.add_xpath('grrr',xREACTIONS_['attributes']['grrr']) 
         yield new.load_item()       
