@@ -6,12 +6,13 @@ from scrapy.http import FormRequest
 from scrapy.exceptions import CloseSpider
 from fbcrawl.items import FbcrawlItem, parse_date2
 from datetime import datetime
+from time import sleep
 
 class FacebookSpider(scrapy.Spider):
     '''
     Parse FB pages (needs credentials)
     '''    
-    name = 'fb'
+    name = 'newfb'
     custom_settings = {
         'FEED_EXPORT_FIELDS': ['source','shared_from','date','text', \
                                'reactions','likes','ahah','love','wow', \
@@ -53,7 +54,7 @@ class FacebookSpider(scrapy.Spider):
             self.year = 2014
         else:
             self.date = datetime.strptime(kwargs['date'],'%Y-%m-%d')
-            self.year = self.date.year
+            self.year = datetime.now().year - 1
 
         #parse lang, if not provided (but is supported) it will be guessed in parse_home
         if 'lang' not in kwargs:
@@ -70,13 +71,24 @@ class FacebookSpider(scrapy.Spider):
             raise AttributeError('Language provided not currently supported')
             
         #current year, this variable is needed for parse_page recursion
-        self.k = datetime.now().year
+        self.k = 2019
         #count number of posts, used to prioritized parsing and correctly insert in the csv
         self.count = 0
         
-        self.start_urls = ['https://mbasic.facebook.com']    
+        self.start_urls = ['https://mbasic.facebook.com/' + self.page]    
 
-    def parse(self, response):
+    def parse(self,response):
+        data = response.xpath("//div[contains(@data-ft,'top_level_post_id')]/@data-ft").extract()
+        import json
+        json_data = json.loads(data[0])
+        page_id = json_data['page_id']
+        first_post = json_data['top_level_post_id']
+        
+        magic_link = 'https://m.facebook.com/page_content_list_view/more/?page_id=' + \
+                      str(page_id) 
+        return scrapy.Request(url=magic_link)#,callback=self.parse_page,meta={'index':1})
+
+    def parse2(self, response):
         '''
         Handle login with provided credentials
         '''
@@ -163,6 +175,7 @@ class FacebookSpider(scrapy.Spider):
             post = post.xpath(".//a[contains(@href,'footer')]/@href").extract() 
             temp_post = response.urljoin(post[0])
             self.count -= 1
+            sleep(2)
             yield scrapy.Request(temp_post, self.parse_post, priority = self.count, meta={'item':new})       
 
         #load following page, try to click on "more"
@@ -179,6 +192,7 @@ class FacebookSpider(scrapy.Spider):
                     new_page = response.urljoin(new_page[0])
                     self.k -= 1
                     self.logger.info('Everything OK, new flag: {}'.format(self.k))                                
+                    sleep(2)
                     yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k})
                 else:
                     while not new_page: #sometimes the years are skipped this handles small year gaps
@@ -195,6 +209,7 @@ class FacebookSpider(scrapy.Spider):
                     new_page = response.urljoin(new_page[0])
                     self.k -= 1
                     self.logger.info('Now going with flag {}'.format(self.k))
+                    sleep(2)
                     yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k}) 
             else:
                 self.logger.info('Crawling has finished with no errors!')
@@ -206,6 +221,7 @@ class FacebookSpider(scrapy.Spider):
             else:
 #                self.logger.info('FLAG DOES NOT ALWAYS REPRESENT ACTUAL YEAR')
                 self.logger.info('First page scraped, click on more {}! Flag not set, default flag = {}'.format(new_page,date))
+                sleep(2)
                 yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k})
                 
     def parse_post(self,response):
