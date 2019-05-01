@@ -4,7 +4,7 @@ import logging
 from scrapy.loader import ItemLoader
 from scrapy.http import FormRequest
 from scrapy.exceptions import CloseSpider
-from fbcrawl.items import FbcrawlItem, parse_date2
+from fbcrawl.items import FbcrawlItem, parse_date
 from datetime import datetime
 
 class FacebookSpider(scrapy.Spider):
@@ -45,7 +45,7 @@ class FacebookSpider(scrapy.Spider):
        
         #parse date
         if 'date' not in kwargs:
-            self.logger.info('Date attribute not provided, scraping date set to 2014-02-04 (fb launch date)')
+            self.logger.info('Date attribute not provided, scraping date set to 2004-02-04 (fb launch date)')
             self.date = datetime(2004,2,4)
         else:
             self.date = datetime.strptime(kwargs['date'],'%Y-%m-%d')
@@ -66,6 +66,12 @@ class FacebookSpider(scrapy.Spider):
             self.logger.info('Change your interface lang from facebook settings and try again')
             raise AttributeError('Language provided not currently supported')
         
+        #max num of posts to crawl
+        if 'max' not in kwargs:
+            self.max = int(10e5)
+        else:
+            self.max = int(kwargs['max'])
+    
         #current year, this variable is needed for proper parse_page recursion
         self.k = datetime.now().year
         #count number of posts, used to enforce DFS and insert posts orderly in the csv
@@ -142,15 +148,17 @@ class FacebookSpider(scrapy.Spider):
             many_features = post.xpath('./@data-ft').get()
             date = []
             date.append(many_features)
-            date = parse_date2(date)
+            date = parse_date(date)
             current_date = datetime.strptime(date,'%Y-%m-%d %H:%M:%S')
 
             if self.date > current_date:
                 raise CloseSpider('Reached date: {}'.format(self.date))
             new = ItemLoader(item=FbcrawlItem(),selector=post)
+            if abs(self.count) + 1 > self.max:
+                raise CloseSpider('Reached max num of post: {}. Crawling finished'.format(abs(self.count)))
             self.logger.info('Parsing post n = {}, post_date = {}'.format(abs(self.count)+1,date))
             new.add_xpath('comments', './div[2]/div[2]/a[1]/text()')     
-            new.add_xpath('date','./@data-ft')
+            new.add_value('date',date)
             new.add_xpath('post_id','./@data-ft')
             new.add_xpath('url', ".//a[contains(@href,'footer')]/@href")
 
@@ -166,6 +174,7 @@ class FacebookSpider(scrapy.Spider):
         #if not present look for the highest year not parsed yet
         #click once on the year and go back to clicking "more"
         new_page = response.xpath("//div[2]/a[contains(@href,'timestart=') and not(contains(text(),'ent')) and not(contains(text(),number()))]/@href").extract()      
+        #this is why lang is needed                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^
         if not new_page: 
             self.logger.info('[!] "more" link not found, will look for a year')
             #self.k is the year that we look for in the link. 
@@ -227,5 +236,4 @@ class FacebookSpider(scrapy.Spider):
         new.add_xpath('wow',"//a[contains(@href,'reaction_type=3')]/span/text()")
         new.add_xpath('sigh',"//a[contains(@href,'reaction_type=7')]/span/text()")
         new.add_xpath('grrr',"//a[contains(@href,'reaction_type=8')]/span/text()")     
-        self.logger.info('Parsing reaction for post num {}'.format(abs(self.count)+1))
         yield new.load_item()       
