@@ -22,6 +22,7 @@ class FacebookSpider(scrapy.Spider):
         #turn off annoying logging, set LOG_LEVEL=DEBUG in settings.py to see more logs
         logger = logging.getLogger('scrapy.middleware')
         logger.setLevel(logging.WARNING)
+        
         super().__init__(*args,**kwargs)
         
         #email & pass need to be passed as attributes!
@@ -29,7 +30,7 @@ class FacebookSpider(scrapy.Spider):
             raise AttributeError('You need to provide valid email and password:\n'
                                  'scrapy fb -a email="EMAIL" -a password="PASSWORD"')
         else:
-            self.logger.info('Email and password provided, using these as credentials')
+            self.logger.info('Email and password provided, will be used to log in')
 
         #page name parsing (added support for full urls)
         if 'page' not in kwargs:
@@ -37,27 +38,23 @@ class FacebookSpider(scrapy.Spider):
                                  'scrapy fb -a page="PAGENAME"')
         elif self.page.find('https://www.facebook.com/') != -1:
             self.page = self.page[25:]
-            self.logger.info('Page attribute provided, scraping "{}"'.format(self.page))
         elif self.page.find('https://mbasic.facebook.com/') != -1:
             self.page = self.page[28:]
-            self.logger.info('Page attribute provided, scraping "{}"'.format(self.page))
         elif self.page.find('https://m.facebook.com/') != -1:
             self.page = self.page[23:]
-            self.logger.info('Page attribute provided, scraping "{}"'.format(self.page))
-        else:
-            self.logger.info('Page attribute provided, scraping "{}"'.format(self.page))
        
         #parse date
         if 'date' not in kwargs:
-            self.date = datetime(2014,1,1)
-            self.year = 2014
+            self.logger.info('Date attribute not provided, scraping date set to 2014-02-04 (fb launch date)')
+            self.date = datetime(2004,2,4)
         else:
             self.date = datetime.strptime(kwargs['date'],'%Y-%m-%d')
-            self.year = self.date.year
+            self.logger.info('Date attribute provided, fbcrawl will stop crawling at {}'.format(kwargs['date']))
+        self.year = self.date.year
 
         #parse lang, if not provided (but is supported) it will be guessed in parse_home
         if 'lang' not in kwargs:
-            self.logger.info('Language attribute not provided, I will try to guess it from the fb interface')
+            self.logger.info('Language attribute not provided, fbcrawl will try to guess it from the fb interface')
             self.logger.info('To specify, add the lang parameter: scrapy fb -a lang="LANGUAGE"')
             self.logger.info('Currently choices for "LANGUAGE" are: "en", "es", "fr", "it", "pt"')
             self.lang = '_'                       
@@ -68,10 +65,10 @@ class FacebookSpider(scrapy.Spider):
             self.logger.info('Currently supported languages are: "en", "es", "fr", "it", "pt"')                             
             self.logger.info('Change your interface lang from facebook settings and try again')
             raise AttributeError('Language provided not currently supported')
-            
-        #current year, this variable is needed for parse_page recursion
+        
+        #current year, this variable is needed for proper parse_page recursion
         self.k = datetime.now().year
-        #count number of posts, used to prioritized parsing and correctly insert in the csv
+        #count number of posts, used to enforce DFS and insert posts orderly in the csv
         self.count = 0
         
         self.start_urls = ['https://mbasic.facebook.com']    
@@ -96,8 +93,7 @@ class FacebookSpider(scrapy.Spider):
         '''
         #handle 'save-device' redirection
         if response.xpath("//div/a[contains(@href,'save-device')]"):
-            self.logger.info('Got stuck in "save-device" checkpoint')
-            self.logger.info('I will now try to redirect to the correct page')
+            self.logger.info('Going through the "save-device" checkpoint')
             return FormRequest.from_response(
                 response,
                 formdata={'name_action_selected': 'dont_save'},
@@ -152,7 +148,7 @@ class FacebookSpider(scrapy.Spider):
             if self.date > current_date:
                 raise CloseSpider('Reached date: {}'.format(self.date))
             new = ItemLoader(item=FbcrawlItem(),selector=post)
-            self.logger.info('Parsing post n = {}'.format(abs(self.count)))
+            self.logger.info('Parsing post n = {}, post_date = {}'.format(abs(self.count)+1,date))
             new.add_xpath('comments', './div[2]/div[2]/a[1]/text()')     
             new.add_xpath('date','./@data-ft')
             new.add_xpath('post_id','./@data-ft')
@@ -167,58 +163,60 @@ class FacebookSpider(scrapy.Spider):
 
         #load following page, try to click on "more"
         #after few pages have been scraped, the "more" link might disappears 
-        #if not present look for the highest year not parsed yet, click once 
-        #and keep looking for "more"
+        #if not present look for the highest year not parsed yet
+        #click once on the year and go back to clicking "more"
         new_page = response.xpath("//div[2]/a[contains(@href,'timestart=') and not(contains(text(),'ent')) and not(contains(text(),number()))]/@href").extract()      
         if not new_page: 
+            self.logger.info('[!] "more" link not found, will look for a year')
+            #self.k is the year that we look for in the link. 
             if response.meta['flag'] == self.k and self.k >= self.year:                
-                self.logger.info('There are no more, flag set at = {}'.format(self.k))
                 xpath = "//div/a[contains(@href,'time') and contains(text(),'" + str(self.k) + "')]/@href"
                 new_page = response.xpath(xpath).extract()
                 if new_page:
                     new_page = response.urljoin(new_page[0])
                     self.k -= 1
-                    self.logger.info('Everything OK, new flag: {}'.format(self.k))                                
+                    self.logger.info('Found a link for more posts, click on year "{}", new_page = {}'.format(self.k,new_page))
                     yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k})
                 else:
                     while not new_page: #sometimes the years are skipped this handles small year gaps
-                        self.logger.info('XPATH not found for year {}'.format(self.k-1))
+                        self.logger.info('Link not found for year {}, trying with previous year {}'.format(self.k,self.k-1))
                         self.k -= 1
-                        self.logger.info('Trying with previous year, flag={}'.format(self.k))
                         if self.k < self.year:
-                            self.logger.info('The previous year to crawl is less than the parameter year: {} < {}'.format(self.k,self.year))
-                            self.logger.info('This is not handled well, please re-run with -a year="{}" or less'.format(self.k))
-                            break                        
+                            raise CloseSpider('Reached date: {}. Crawling finished'.format(self.date))
                         xpath = "//div/a[contains(@href,'time') and contains(text(),'" + str(self.k) + "')]/@href"
                         new_page = response.xpath(xpath).extract()
-                    self.logger.info('New page found with flag {}'.format(self.k))
+                    self.logger.info('Found a link for more posts, click on year "{}", new_page = {}'.format(self.k,new_page))
                     new_page = response.urljoin(new_page[0])
                     self.k -= 1
-                    self.logger.info('Now going with flag {}'.format(self.k))
                     yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k}) 
             else:
                 self.logger.info('Crawling has finished with no errors!')
         else:
             new_page = response.urljoin(new_page[0])
             if 'flag' in response.meta:
-                self.logger.info('Page scraped, click on more! new_page = {} flag = {}'.format(new_page,date))
+                self.logger.info('Page scraped, clicking on "more"! new_page = {}'.format(new_page))
                 yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':response.meta['flag']})
             else:
-#                self.logger.info('FLAG DOES NOT ALWAYS REPRESENT ACTUAL YEAR')
-                self.logger.info('First page scraped, click on more {}! Flag not set, default flag = {}'.format(new_page,date))
+                self.logger.info('First page scraped, clicking on "more"! new_page = {}'.format(new_page))
                 yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k})
                 
     def parse_post(self,response):
         new = ItemLoader(item=FbcrawlItem(),response=response,parent=response.meta['item'])
+        new.context['lang'] = self.lang           
         new.add_xpath('source', "//td/div/h3/strong/a/text() | //span/strong/a/text() | //div/div/div/a[contains(@href,'post_id')]/strong/text()")
         new.add_xpath('shared_from','//div[contains(@data-ft,"top_level_post_id") and contains(@data-ft,\'"isShare":1\')]/div/div[3]//strong/a/text()')
      #   new.add_xpath('date','//div/div/abbr/text()')
         new.add_xpath('text','//div[@data-ft]//p//text() | //div[@data-ft]/div[@class]/div[@class]/text()')
-        new.add_xpath('reactions',"//a[contains(@href,'reaction/profile')]/div/div/text()")  
         
-        reactions = response.xpath("//div[contains(@id,'sentence')]/a[contains(@href,'reaction/profile')]/@href")
-        reactions = response.urljoin(reactions[0].extract())
-        yield scrapy.Request(reactions, callback=self.parse_reactions, meta={'item':new})
+        #check reactions for old posts
+        check_reactions = response.xpath("//a[contains(@href,'reaction/profile')]/div/div/text()").get()
+        if not check_reactions:
+            yield new.load_item()       
+        else:
+            new.add_xpath('reactions',"//a[contains(@href,'reaction/profile')]/div/div/text()")              
+            reactions = response.xpath("//div[contains(@id,'sentence')]/a[contains(@href,'reaction/profile')]/@href")
+            reactions = response.urljoin(reactions[0].extract())
+            yield scrapy.Request(reactions, callback=self.parse_reactions, meta={'item':new})
         
     def parse_reactions(self,response):
         new = ItemLoader(item=FbcrawlItem(),response=response, parent=response.meta['item'])
@@ -228,5 +226,6 @@ class FacebookSpider(scrapy.Spider):
         new.add_xpath('love',"//a[contains(@href,'reaction_type=2')]/span/text()")
         new.add_xpath('wow',"//a[contains(@href,'reaction_type=3')]/span/text()")
         new.add_xpath('sigh',"//a[contains(@href,'reaction_type=7')]/span/text()")
-        new.add_xpath('grrr',"//a[contains(@href,'reaction_type=8')]/span/text()")        
+        new.add_xpath('grrr',"//a[contains(@href,'reaction_type=8')]/span/text()")     
+        self.logger.info('Parsing reaction for post num {}'.format(abs(self.count)+1))
         yield new.load_item()       

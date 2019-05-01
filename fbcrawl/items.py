@@ -8,6 +8,7 @@
 import scrapy
 from scrapy.loader.processors import TakeFirst, Join, MapCompose
 from datetime import datetime, timedelta
+import pytz
 
 def parse_date(init_date,loader_context):
     lang = loader_context['lang']
@@ -480,8 +481,9 @@ def parse_date2(date):
 
     for key, value in recursive_items(d):
         flat_d[key] = value
-        
-    return str(datetime.fromtimestamp(flat_d['publish_time']) - timedelta(hours=5))  
+
+    #returns timestamp in localtime conversion from linux timestamp UTC
+    return str(datetime.fromtimestamp(flat_d['publish_time']))  
     
 def id_strip(post_id):
     import json
