@@ -37,5 +37,6 @@ class FbcrawlPipeline(object):
 
     def process_item(self, item, spider):
         # passing the item to FanItemExporter object for expoting to file
-        spider.exporter.export_item(item["text"])
+        if item["text"]:
+            spider.exporter.export_item(item["text"])
         return item
