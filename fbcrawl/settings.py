@@ -20,12 +20,12 @@ USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-CONCURRENT_REQUESTS = 16
+CONCURRENT_REQUESTS = 10
 
 # Configure a delay for requests for the same website (default: 0)
 # See https://doc.scrapy.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY = 3
+DOWNLOAD_DELAY = 1.5
 
 # The download delay setting will honor only one of:
 #CONCURRENT_REQUESTS_PER_DOMAIN = 1
@@ -90,5 +90,9 @@ DOWNLOAD_DELAY = 3
 #FEED_EXPORT_FIELDS = ["source", "date", "text", "reactions","likes","ahah","love","wow","sigh","grrr","comments","url"] # specifies the order of the column to export as CSV
 FEED_EXPORT_ENCODING = 'utf-8'
 DUPEFILTER_DEBUG = True
-LOG_LEVEL = 'INFO'
-#LOG_LEVEL = 'DEBUG'
+# LOG_LEVEL = 'INFO'
+LOG_LEVEL = 'DEBUG'
+FILE_NAME = 'outputfile.ext'
+ITEM_PIPELINES = {
+    'fbcrawl.pipelines.FbcrawlPipeline' : 0,
+}
