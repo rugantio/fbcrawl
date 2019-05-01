@@ -2,3 +2,12 @@
 
 .*
 !.gitignore
+fbcrawl/__pycache__/__init__.cpython-37.pyc
+fbcrawl/__pycache__/__init__.cpython-37.pyc
+fbcrawl/__pycache__/items.cpython-37.pyc
+fbcrawl/__pycache__/pipelines.cpython-37.pyc
+fbcrawl/__pycache__/settings.cpython-37.pyc
+fbcrawl/FBCrawlRunner.bat
+fbcrawl/spiders/__pycache__/fbcrawl.cpython-37.pyc
+fbcrawl/spiders/__pycache__/comments.cpython-37.pyc
+fbcrawl/spiders/__pycache__/__init__.cpython-37.pyc
