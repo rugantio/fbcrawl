@@ -68,7 +68,7 @@ class CommentsSpider(FacebookSpider):
             prev_xpath = xPREV_COMMENTS_DIV
             if not response.xpath(next_xpath) or group_flag == 1:
                 for next_page in response.xpath(prev_xpath):
-                    new_page = next_page.xpath(xNEXT_COMMENTS_['attributes']['rnew_pageoot']).extract()
+                    new_page = next_page.xpath(xNEXT_COMMENTS_['attributes']['new_page']).extract()
                     new_page = response.urljoin(new_page[0])
                     self.logger.info('New page to be crawled {}'.format(new_page))
                     yield scrapy.Request(new_page,

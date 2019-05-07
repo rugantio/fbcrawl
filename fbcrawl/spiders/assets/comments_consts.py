@@ -1,6 +1,6 @@
 # comments xpath query constants
 #
-# For simplicity, this file contains all the xpath(s) used in the fbcrawl spider
+# For simplicity, this file contains all the xpath(s) used in the comments spider
 # The purpose of this document is to enhance readability and limit the are of changes
 # All Constants in this File needs to be constructed as follows: x[MEANINGFUL_TARGET_NAME]_TAGNAME
 # All Container Elements ( Elements with nested attributes ) in this File needs to be constructed as follows: x[MEANINGFUL_TARGET_NAME]_
