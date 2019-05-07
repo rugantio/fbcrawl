@@ -25,7 +25,6 @@ class FacebookSpider(scrapy.Spider):
         #turn off annoying logging, set LOG_LEVEL=DEBUG in settings.py to see more logs
         logger = logging.getLogger('scrapy.middleware')
         logger.setLevel(logging.WARNING)
-
         super().__init__(*args,**kwargs)
 
         #email & pass need to be passed as attributes!
@@ -153,7 +152,6 @@ class FacebookSpider(scrapy.Spider):
             if abs(self.count) + 1 > self.max:
                 raise CloseSpider('Reached max num of post: {}. Crawling finished'.format(abs(self.count)))
             self.logger.info('Parsing post n = {}, post_date = {}'.format(abs(self.count)+1,date))
-            self.logger.info('Parsing post n = {}'.format(abs(self.count)))
             new.add_xpath('comments', xPOST_['attributes']['comments'])
             new.add_xpath('date',xPOST_['attributes']['date'])
             new.add_xpath('post_id',xPOST_['attributes']['post_id'])
@@ -233,4 +231,3 @@ class FacebookSpider(scrapy.Spider):
         new.add_xpath('sigh',xREACTIONS_['attributes']['sigh'])
         new.add_xpath('grrr',xREACTIONS_['attributes']['grrr'])
         yield new.load_item()
-
