@@ -18,6 +18,8 @@ def comments_strip(string,loader_context):
             return string[0].rstrip(' commenti')
         
     elif lang == 'en':
+        if(string[0] == 'Share'):
+            return '0'
         new_string = string[0].rstrip(' Comments')
         while new_string.rfind(',') != -1:
             new_string = new_string[0:new_string.rfind(',')] + new_string[new_string.rfind(',')+1:]
