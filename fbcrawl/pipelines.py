@@ -7,13 +7,36 @@
 
 from scrapy.exceptions import DropItem
 from datetime import datetime
+from fbcrawl.exporters import TCPExports
+import logging
 
 class FbcrawlPipeline(object):
-    pass
-#    def process_item(self, item, spider):
-#        if item['date'] < datetime(2017,1,1).date():
-#            raise DropItem("Dropping element because it's older than 01/01/2017")
-#        elif item['date'] > datetime(2018,3,4).date():
-#            raise DropItem("Dropping element because it's newer than 04/03/2018")
-#        else:
-#            return item
+    # def __init__(self, file_name):
+    def __init__(self):
+        # this is an empty initialization  for the exporter 
+        self.exporter = lambda: None
+
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        # getting the value of FILE_NAME field from settings.py if needed 
+        output_file_name = crawler.settings.get('FILE_NAME')
+        return cls()
+
+    def open_spider(spider,self):
+        #Specifying target exporter 
+        self.exporter = TCPExports()
+        self.exporter.start_exporting()
+
+    def close_spider(spider,self):
+        # Ending the export 
+        self.exporter.finish_exporting()
+
+        # Closing the opened output file
+        # self.file_handle.close()
+
+    def process_item(self, item, spider):
+        # passing the item to FanItemExporter object for expoting to file
+        if item["text"]:
+            spider.exporter.export_item(item["text"])
+        return item
