@@ -627,3 +627,14 @@ class CommentsItem(scrapy.Item):
     sigh = scrapy.Field()                      
     grrr = scrapy.Field()                      
     share = scrapy.Field()                      # num of shares
+
+class ProfileItem(scrapy.Item):
+    name = scrapy.Field()   
+    gender = scrapy.Field()
+    birthday = scrapy.Field()
+    current_city = scrapy.Field()
+    hometown = scrapy.Field()
+    work = scrapy.Field()
+    education = scrapy.Field()
+    interested_in = scrapy.Field()
+    page = scrapy.Field()
