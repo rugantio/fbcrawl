@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
 OLD=$PWD
-cd $(dirname $0)
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+cd $DIR
 
 if [ -d "/usr/local/crawler-venv" ]
 then
