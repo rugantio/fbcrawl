@@ -487,6 +487,11 @@ def parse_date2(init_date,loader_context):
                     month = months_abbr[date[0].lower()]
                     year = int(date[2])
                     return datetime(year,month,day).date()
+                #'Yesterday', 'at', '10:56'
+                elif date[0].lower() == 'yesterday' and date[1] == 'at':
+                    day = int(str(datetime.now().date()-timedelta(1)).split(sep='-')[2])
+                    month = int(str(datetime.now().date()-timedelta(1)).split(sep='-')[1])
+                    return datetime(year,month,day).date()
                 #parsing failed
                 else:
                     return date
@@ -513,25 +518,40 @@ def parse_date2(init_date,loader_context):
                     day = int(str(datetime.now().date()-timedelta(delta)).split(sep='-')[2])
                     month = int(str(datetime.now().date()-timedelta(delta)).split(sep='-')[1])
                     return datetime(year,month,day).date()
+            # 8 June at 0:11 
+            elif date[2] == 'at':
+                return datetime(year, months[date[1].lower()], int(date[0]) ).date()
             #parsing failed
             else:
                 return date
 # l = 5
         elif l == 5:
-           if date[2] == 'at':
-               #Jan 29 at 10:00 PM
-               if len(date[0]) == 3:
-                   day = int(date[1])
-                   month = months_abbr[date[0].lower()]
-                   return datetime(year,month,day).date()
-               #29 febbraio alle ore 21:49
-               else:
-                   day = int(date[1])
-                   month = months[date[0].lower()]
-                   return datetime(year,month,day).date()
-           #parsing failed
-           else:
-               return date
+            if date[2] == 'at':
+                #Jan 29 at 10:00 PM
+                if len(date[0]) == 3:
+                    day = int(date[1])
+                    month = months_abbr[date[0].lower()]
+                    return datetime(year,month,day).date()
+                #29 febbraio alle ore 21:49
+                else:
+                    day = int(date[1])
+                    month = months[date[0].lower()]
+                    return datetime(year,month,day).date()
+            # 23 March 2018 at 16:00
+            elif date[3] == 'at' and len(date[2]) == 4:
+                if len(date[0]) == 3:
+                    day = int(date[0])
+                    month = months_abbr[date[1].lower()]
+                    year = int(date[2])
+                    return datetime(year, month, day).date()
+                else:
+                    day = int(date[0])
+                    month = months[date[1].lower()]
+                    year = int(date[2])
+                    return datetime(year,month,day).date()                    
+            #parsing failed
+            else:
+                return date
 # l = 6
         elif l == 6:
            if date[3] == 'at':
