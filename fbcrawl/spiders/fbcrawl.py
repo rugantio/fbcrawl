@@ -5,6 +5,7 @@ from scrapy.loader import ItemLoader
 from scrapy.http import FormRequest
 from scrapy.exceptions import CloseSpider
 from fbcrawl.items import FbcrawlItem, parse_date, parse_date2
+from fbcrawl.settings import FB_EMAIL, FB_PASSWORD
 from datetime import datetime
 
 class FacebookSpider(scrapy.Spider):
@@ -17,7 +18,7 @@ class FacebookSpider(scrapy.Spider):
                                'reactions','likes','ahah','love','wow', \
                                'sigh','grrr','comments','post_id','url'],
         'DUPEFILTER_CLASS' : 'scrapy.dupefilters.BaseDupeFilter',
-        'LIMIT': 20,
+        'LIMIT': 300,
     }
     
     def __init__(self, *args, **kwargs):
@@ -28,7 +29,10 @@ class FacebookSpider(scrapy.Spider):
         super().__init__(*args,**kwargs)
         
         #email & pass need to be passed as attributes!
-        if 'email' not in kwargs or 'password' not in kwargs:
+        if FB_EMAIL and FB_PASSWORD:
+            self.password = FB_PASSWORD
+            self.email = FB_EMAIL
+        elif 'email' not in kwargs or 'password' not in kwargs:
             raise AttributeError('You need to provide valid email and password:\n'
                                  'scrapy fb -a email="EMAIL" -a password="PASSWORD"')
         else:
