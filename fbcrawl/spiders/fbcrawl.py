@@ -17,6 +17,7 @@ class FacebookSpider(scrapy.Spider):
                                'reactions','likes','ahah','love','wow', \
                                'sigh','grrr','comments','post_id','url'],
         'DUPEFILTER_CLASS' : 'scrapy.dupefilters.BaseDupeFilter',
+        'LIMIT': 20,
     }
     
     def __init__(self, *args, **kwargs):
@@ -72,7 +73,7 @@ class FacebookSpider(scrapy.Spider):
         
         #max num of posts to crawl
         if 'max' not in kwargs:
-            self.max = int(10e5)
+            self.max = int(FacebookSpider.custom_settings['LIMIT'])
         else:
             self.max = int(kwargs['max'])
     
