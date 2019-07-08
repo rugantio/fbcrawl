@@ -1,6 +1,6 @@
 import scrapy
 import logging
-import fbcrawl.settings import FB_EMAIL, FB_PASSWORD
+from fbcrawl.settings import FB_EMAIL, FB_PASSWORD
 from scrapy.loader import ItemLoader
 from scrapy.http import FormRequest
 from scrapy.exceptions import CloseSpider
@@ -37,7 +37,7 @@ class FacebookSpider(scrapy.Spider):
             self.logger.info('Email and password provided, will be used to log in')
 
         #page name parsing (added support for full urls)
-        if 'page' not in kwargs or 'pages' not in kwargs:
+        if 'page' not in kwargs and 'pages' not in kwargs:
             raise AttributeError('Please provide page url')
         if 'page' in kwargs:
             self.pages = self.page
