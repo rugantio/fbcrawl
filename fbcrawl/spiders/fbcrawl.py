@@ -5,7 +5,6 @@ from scrapy.loader import ItemLoader
 from scrapy.http import FormRequest
 from scrapy.exceptions import CloseSpider
 from fbcrawl.items import FbcrawlItem, parse_date, parse_date2
-from fbcrawl.settings import FB_EMAIL, FB_PASSWORD
 from datetime import datetime
 
 class FacebookSpider(scrapy.Spider):
@@ -18,7 +17,6 @@ class FacebookSpider(scrapy.Spider):
                                'reactions','likes','ahah','love','wow', \
                                'sigh','grrr','comments','post_id','url'],
         'DUPEFILTER_CLASS' : 'scrapy.dupefilters.BaseDupeFilter',
-        'LIMIT': 300,
     }
     
     def __init__(self, *args, **kwargs):
@@ -39,19 +37,23 @@ class FacebookSpider(scrapy.Spider):
             self.logger.info('Email and password provided, will be used to log in')
 
         #page name parsing (added support for full urls)
+        if 'page' not in kwargs or 'pages' not in kwargs:
+            raise AttributeError('Please provide page url')
         if 'page' in kwargs:
-            if self.page.find('/groups/') != -1:
+            self.pages = self.page
+        urls = []
+        for url in self.pages.split(','):
+            if url.find('/groups/') != -1:
                 self.group = 1
             else:
                 self.group = 0
-            if self.page.find('https://www.facebook.com/') != -1:
-                self.page = self.page[25:]
-            elif self.page.find('https://mbasic.facebook.com/') != -1:
-                self.page = self.page[28:]
-            elif self.page.find('https://m.facebook.com/') != -1:
-                self.page = self.page[23:]
-
-
+            # get sub urls
+            for domain in ['https://www.facebook.com/', 'https://mbasic.facebook.com/', 'https://m.facebook.com/']:
+                if url.find(domain) != -1:
+                    url = url[len(domain):]
+                    urls.append(url)
+                    break
+        self.pages = urls
         #parse date
         if 'date' not in kwargs:
             self.logger.info('Date attribute not provided, scraping date set to 2004-02-04 (fb launch date)')
@@ -77,7 +79,7 @@ class FacebookSpider(scrapy.Spider):
         
         #max num of posts to crawl
         if 'max' not in kwargs:
-            self.max = int(FacebookSpider.custom_settings['LIMIT'])
+            self.max = int(10e5)
         else:
             self.max = int(kwargs['max'])
     
@@ -92,7 +94,7 @@ class FacebookSpider(scrapy.Spider):
         '''
         Handle login with provided credentials
         '''
-        return FormRequest.from_response(
+        yield FormRequest.from_response(
                 response,
                 formxpath='//form[contains(@action, "login")]',
                 formdata={'email': self.email,'pass': self.password},
@@ -109,12 +111,11 @@ class FacebookSpider(scrapy.Spider):
         #handle 'save-device' redirection
         if response.xpath("//div/a[contains(@href,'save-device')]"):
             self.logger.info('Going through the "save-device" checkpoint')
-            return FormRequest.from_response(
+            yield FormRequest.from_response(
                 response,
                 formdata={'name_action_selected': 'dont_save'},
                 callback=self.parse_home
                 )
-            
         #set language interface
         if self.lang == '_':
             if response.xpath("//input[@placeholder='Search Facebook']"):
@@ -138,9 +139,11 @@ class FacebookSpider(scrapy.Spider):
                                      'and try again')
                                                                  
         #navigate to provided page
-        href = response.urljoin(self.page)
-        self.logger.info('Scraping facebook page {}'.format(href))
-        return scrapy.Request(url=href,callback=self.parse_page,meta={'index':1})
+        for page_url in self.pages:
+            self.count = 0
+            href = response.urljoin(page_url)
+            self.logger.info('Scraping facebook page {}'.format(href))
+            yield scrapy.Request(url=href, callback=self.parse_page, meta={'index':1})
 
     def parse_page(self, response):
         '''
@@ -239,7 +242,6 @@ class FacebookSpider(scrapy.Spider):
         new.add_xpath('shared_from','//div[contains(@data-ft,"top_level_post_id") and contains(@data-ft,\'"isShare":1\')]/div/div[3]//strong/a/text()')
      #   new.add_xpath('date','//div/div/abbr/text()')
         new.add_xpath('text','//div[@data-ft]//p//text() | //div[@data-ft]/div[@class]/div[@class]/text()')
-        
         #check reactions for old posts
         check_reactions = response.xpath("//a[contains(@href,'reaction/profile')]/div/div/text()").get()
         if not check_reactions:
