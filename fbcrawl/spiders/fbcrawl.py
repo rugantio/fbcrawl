@@ -1,6 +1,6 @@
 import scrapy
 import logging
-
+import fbcrawl.settings import FB_EMAIL, FB_PASSWORD
 from scrapy.loader import ItemLoader
 from scrapy.http import FormRequest
 from scrapy.exceptions import CloseSpider
