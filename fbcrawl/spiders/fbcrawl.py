@@ -6,7 +6,7 @@ from scrapy.http import FormRequest
 from scrapy.exceptions import CloseSpider
 from fbcrawl.items import FbcrawlItem, parse_date, parse_date2
 from datetime import datetime
-
+import random
 class FacebookSpider(scrapy.Spider):
     '''
     Parse FB pages (needs credentials)
@@ -53,6 +53,7 @@ class FacebookSpider(scrapy.Spider):
                     url = url[len(domain):]
                     urls.append(url)
                     break
+        random.shuffle(urls)
         self.pages = urls
         #parse date
         if 'date' not in kwargs:
