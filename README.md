@@ -12,6 +12,31 @@ This fork stores each items into postgresql database
 * support postgresql storage pipeline
 
 
+## Setup
+
+You will need 3 .env files in 3 different directory
+
+First .env should be placed in the project root directory
+
+```
+POSTGRESQL_SETTINGS_USER = "postgresql user name"
+POSTGRESQL_SETTINGS_DATABASE = "postgresql database"
+POSTGRESQL_SETTINGS_HOST = "database ip"
+POSTGRESQL_SETTINGS_PORT = "postgresql port"
+POSTGRESQL_SETTINGS_PASSWORD = "postgresql password"
+TIMEZONE = "your account timezone"
+```
+
+The second .env should be place under fbcrawl directory
+
+```
+FB_EMAIL="your facebook login email"
+FB_PASSWORD="your facebook password"
+```
+
+The third .env should be place under postgres directory, the format is same as the first one
+
+
 ## DONATIONS
 Fbcrawl is free software. It is not "free as beer" nor "free as speech", it is "free as a toilet": it is always available and working, but someone as to keep it clean and tidy, and I am the only one at the moment, it is not a community project. Please consider make a donation, it will keep this project alive and if I see actual interest from people I will get on with the [TODO](https://github.com/rugantio/fbcrawl/blob/master/README.md#TODO) list. One of the my long-term goal is to refactor the framework with a gui, connections to databases and graph vizualitations. These tasks would take at least a couple of months of work, and I will be able to afford them only with your support! Thank you :)
 
