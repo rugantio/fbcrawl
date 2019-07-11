@@ -6,9 +6,10 @@
 # See: https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 
 from scrapy.exceptions import DropItem
-from postgres.models import Post
+from postgres.models import Post, Group
 from postgres.settings import postgres_database
 from datetime import datetime
+import shortuuid
 
 class FbcrawlPipeline(object):
     pass
@@ -30,8 +31,15 @@ class PostgresPostPipeline(object):
             raise DropItem("No date found")
         if 'text' not in item:
             raise DropItem("Do not have or do not contain any valid text")
+        if len(item['text']) < 10:
+            raise DropItem("Incomplete info")
         try:
             with postgres_database.atomic():
+                if len(item['source'][1]) > 0 and len(Group.select().where(Group.name == item['source'][1]) ) == 0:
+                    Group.create(
+                        uuid=str(shortuuid.uuid())[:20],
+                        name=item['source'][1]
+                    )
                 post = Post.create(
                         post_id=item['post_id'],
                         source=item['source'][0],

@@ -2,7 +2,7 @@ from peewee import *
 from postgres.settings import postgres_database, TIMEZONE
 from datetime import datetime
 from pytz import timezone
-
+import shortuuid
 
 def timezone_now():
     return datetime.now().replace(tzinfo=timezone(TIMEZONE))
@@ -28,3 +28,9 @@ class Post(Model):
     class Meta:
         database = postgres_database
 
+class Group(Model):
+    uuid = CharField(unique=True, index=True)
+    name = CharField(unique=True, index=True)
+
+    class Meta:
+        database = postgres_database
