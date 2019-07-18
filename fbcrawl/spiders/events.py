@@ -42,6 +42,9 @@ class EventsSpider(FacebookSpider):
         DATE='/html/body/div/div/div[2]/div/table/tbody/tr/td/div[3]/div/div[1]/table/tbody/tr/td[2]/dt/div/text()'
         EVENT_DESCRIPTION='/html/body/div/div/div[2]/div/table/tbody/tr/td/table/tbody/tr/td/div[2]/div[2]/div[2]/div[2]/text()'
         EVENT_COVER='/html/body/div/div/div[2]/div/table/tbody/tr/td/div[2]/div[1]/a/img/@src'
+        GOING='/html/body/div/div/div[2]/div/table/tbody/tr/td/table/tbody/tr/td/div[2]/div[2]/div/div/div/div[2]/a/text()'
+        INTERESTED='/html/body/div/div/div[2]/div/table/tbody/tr/td/table/tbody/tr/td/div[2]/div[2]/div/div/div[2]/div[2]/a/text()'
+        SHARED='/html/body/div/div/div[2]/div/table/tbody/tr/td/table/tbody/tr/td/div[2]/div[2]/div/div/div[3]/div[2]/a/text()'
         date = response.xpath(DATE).extract_first()
         start_date = date.split('–')[0] or None
         end_date = date.split('–')[1] or None
@@ -55,4 +58,7 @@ class EventsSpider(FacebookSpider):
             start_date=start_date,
             end_date=end_date,
             description=response.xpath(EVENT_DESCRIPTION).extract_first()
+            going=response.xpath(GOING).extract_first()
+            interested=response.xpath(INTERESTED).extract_first()
+            shared=response.xpath(SHARED).extract_first()
         )
