@@ -647,3 +647,6 @@ class EventsItem(scrapy.Item):
     start_date = scrapy.Field()
     end_date = scrapy.Field()
     description = scrapy.Field()
+    going = scrapy.Field()
+    interested = scrapy.Field()
+    shared = scrapy.Field()
