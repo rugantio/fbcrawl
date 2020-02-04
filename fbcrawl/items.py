@@ -564,7 +564,7 @@ def id_strip(post_id):
     d = json.loads(post_id[::-1][0]) #nested dict of features
     return str(d['top_level_post_id'])
 
-
+'''Added additional fields'''
 class FbcrawlItem(scrapy.Item):
     source = scrapy.Field()
     date = scrapy.Field()
@@ -606,6 +606,7 @@ class FbcrawlItem(scrapy.Item):
 
 class CommentsItem(scrapy.Item):
     source = scrapy.Field()
+    source_url = scrapy.Field()
     reply_to=scrapy.Field()
     date = scrapy.Field(      # when was the post published
         output_processor=parse_date2
@@ -619,14 +620,30 @@ class CommentsItem(scrapy.Item):
     likes = scrapy.Field(
         output_processor=reactions_strip
     )
-    source_url = scrapy.Field()
     url = scrapy.Field()
-    ahah = scrapy.Field()
-    love = scrapy.Field()
-    wow = scrapy.Field()
-    sigh = scrapy.Field()
-    grrr = scrapy.Field()
-    share = scrapy.Field()                      # num of shares
+    ahah = scrapy.Field(
+        output_processor=reactions_strip
+    )
+    love = scrapy.Field(
+        output_processor=reactions_strip
+    )
+    wow = scrapy.Field(
+        output_processor=reactions_strip
+    )
+    sigh = scrapy.Field(
+        output_processor=reactions_strip
+    )
+    grrr = scrapy.Field(
+        output_processor=reactions_strip
+    )
+    name = scrapy.Field()
+    gender = scrapy.Field()
+    birthday = scrapy.Field()
+    current_city = scrapy.Field()
+    hometown = scrapy.Field()
+    work = scrapy.Field()
+    education = scrapy.Field()
+    interested_in = scrapy.Field()
 
 class ProfileItem(scrapy.Item):
     name = scrapy.Field()
@@ -639,6 +656,7 @@ class ProfileItem(scrapy.Item):
     interested_in = scrapy.Field()
     page = scrapy.Field()
 
+    """end"""
 class EventsItem(scrapy.Item):
     name = scrapy.Field()
     location = scrapy.Field()
