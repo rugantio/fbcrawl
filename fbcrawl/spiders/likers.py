@@ -11,17 +11,29 @@ class FacebookSpider(scrapy.Spider):
     '''
     Parse FB pages (needs credentials)
     '''    
-    name = 'facebook'
-    #self.start_urls = ['https://mbasic.facebook.com'] in __init__ function
+    name = 'likers'
+    # custom_settings = {
+    #     'FEED_EXPORT_FIELDS': ['source','shared_from','date','text', \
+    #                            'reactions' \
+    #                            ,'likes','likers', 'likers_url' \
+    #                            ,'ahah','love','wow', \
+    #                            'sigh','grrr','comments','post_id','url'],
+    #     'DUPEFILTER_CLASS' : 'scrapy.dupefilters.BaseDupeFilter', # disable filtering of duplicate requests
+    # }
+    
     custom_settings = {
-        'FEED_EXPORT_FIELDS': ['source','shared_from','date','text', \
-                               'reactions' \
-                               ,'likes','likers', 'likers_url' \
-                               ,'ahah','love','wow', \
-                               'sigh','grrr','comments','post_id','url'],
+        # 'FEED_EXPORT_FIELDS': ['url','post_id','date','text','likes' #base \ 
+        #                        ,'likers', 'likers_url', 'more_likes', 'likes_url' #added:likers \
+        #                       ],
+        'FEED_EXPORT_FIELDS': ['post_id'
+                                ,'reactions'
+                                #,'likes'  , 'ahah', 'love', 'wow'
+                                #'more_likes_url', 
+                                ,'likers', 'likers_url' \
+                              ],
         'DUPEFILTER_CLASS' : 'scrapy.dupefilters.BaseDupeFilter', # disable filtering of duplicate requests
     }
-    
+
     def __init__(self, *args, **kwargs):
         #turn off annoying logging, set LOG_LEVEL=DEBUG in settings.py to see more logs
         logger = logging.getLogger('scrapy.middleware')
@@ -206,7 +218,7 @@ class FacebookSpider(scrapy.Spider):
                 new_page = response.xpath(xpath).extract()
                 if new_page:
                     new_page = response.urljoin(new_page[0])
-                    self.k -= 1
+                    self.k -= 1 #decrease year
                     self.logger.info('Found a link for year "{}", new_page = {}'.format(self.k,new_page))
                     yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k})
                 else:
@@ -219,7 +231,7 @@ class FacebookSpider(scrapy.Spider):
                         new_page = response.xpath(xpath).extract()
                     self.logger.info('Found a link for year "{}", new_page = {}'.format(self.k,new_page))
                     new_page = response.urljoin(new_page[0])
-                    self.k -= 1
+                    self.k -= 1 #decrease year
                     yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k}) 
             else:
                 self.logger.info('Crawling has finished with no errors!')
@@ -233,6 +245,7 @@ class FacebookSpider(scrapy.Spider):
                 yield scrapy.Request(new_page, callback=self.parse_page, meta={'flag':self.k})
                 
     def parse_post(self,response):
+        print(">>parse_post")
         new = ItemLoader(item=FbcrawlItem(),response=response,parent=response.meta['item'])
         new.context['lang'] = self.lang           
         new.add_xpath('source', "//td/div/h3/strong/a/text() | //span/strong/a/text() | //div/div/div/a[contains(@href,'post_id')]/strong/text()")
@@ -254,12 +267,26 @@ class FacebookSpider(scrapy.Spider):
     def parse_reactions(self,response):
         new = ItemLoader(item=FbcrawlItem(),response=response, parent=response.meta['item'])
         new.context['lang'] = self.lang           
-        new.add_xpath('likes',"//a[contains(@href,'reaction_type=1')]/span/text()")
-        new.add_xpath('likers',"//h3//a/text()")
-        new.add_xpath('likers_url',"//h3//a/@href")
-        new.add_xpath('ahah',"//a[contains(@href,'reaction_type=4')]/span/text()")
-        new.add_xpath('love',"//a[contains(@href,'reaction_type=2')]/span/text()")
-        new.add_xpath('wow',"//a[contains(@href,'reaction_type=3')]/span/text()")
-        new.add_xpath('sigh',"//a[contains(@href,'reaction_type=7')]/span/text()")
-        new.add_xpath('grrr',"//a[contains(@href,'reaction_type=8')]/span/text()")     
+
+        new.replace_xpath('likes',"//a[contains(@href,'reaction_type=1')]/span/text()")
+        new.replace_xpath('likers',"//h3//a/text()")
+        new.replace_xpath('likers_url',"//h3//a/@href")
+        
+        #recusively click 'more' => and then post process...  
+        likes_url = response.xpath('//td/div/a[contains(@href,"/ufi/reaction/profile/browser/fetch/")]/@href')
+        likes_url = response.urljoin(likes_url[0].extract()) if len(likes_url) > 0 else ''
+
+        # debug
+        # print("###dbg:more_likes_url", likes_url)
+        # new.replace_value('more_likes_url',likes_url)
+
         yield new.load_item()       
+
+        # self.logger.info('parse_reactions:new_likers={}, reactions={}'.format(new_likers, reactions))
+        # #self.logger.info('parse_reactions:post_id={},new_likers={}'.format(new.post_id, new_likers))
+        
+        if likes_url != '':
+            print("###dbg:recursive:", likes_url)
+            yield scrapy.Request(likes_url, callback=self.parse_reactions, meta={'item':new})
+
+        
