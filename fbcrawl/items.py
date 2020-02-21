@@ -21,6 +21,31 @@ def comments_strip(string,loader_context):
         if(string[0] == 'Share'):
             return '0'
         new_string = string[0].rstrip(' Comments')
+        new_string = string[0].rstrip(' Comments')
+        while new_string.rfind(',') != -1:
+            new_string = new_string[0:new_string.rfind(',')] + new_string[new_string.rfind(',')+1:]
+        return new_string
+    elif lang == 'en':
+        if(string[0] == 'Share'):
+            return '0'
+        new_string = string[0].rstrip(' Comments')
+        new_string = string[0].rstrip(' Comments')
+        while new_string.rfind(',') != -1:
+            new_string = new_string[0:new_string.rfind(',')] + new_string[new_string.rfind(',')+1:]
+        return new_string
+    elif lang == 'kr':
+        if(string[0] == 'Share'):
+            return '0'
+
+        #print("kr:comments:input[", string[0], "]");
+        new_string = string[0].replace(' ', '')
+        new_string = new_string.replace('댓글', '')
+        new_string = new_string.replace('달기', '')
+        new_string = new_string.replace('개', '')
+        if(len(new_string) == 0):
+            new_string = '0'
+        #print("kr:comments:output:[", new_string, "]");
+
         while new_string.rfind(',') != -1:
             new_string = new_string[0:new_string.rfind(',')] + new_string[new_string.rfind(',')+1:]
         return new_string
@@ -580,6 +605,12 @@ class FbcrawlItem(scrapy.Item):
     likes = scrapy.Field(
         output_processor=reactions_strip
     )
+    likers = scrapy.Field(
+        #output_processor=reactions_strip
+    )
+    likers_url = scrapy.Field(
+        #output_processor= reactions_strip
+    )
     ahah = scrapy.Field(
         output_processor=reactions_strip
     )
@@ -603,7 +634,8 @@ class FbcrawlItem(scrapy.Item):
         output_processor=id_strip
     )
     shared_from = scrapy.Field()
-
+    more_likes_url = scrapy.Field()
+    
 class CommentsItem(scrapy.Item):
     source = scrapy.Field()
     reply_to=scrapy.Field()

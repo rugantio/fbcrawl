@@ -162,13 +162,13 @@ A new spider is now dedicated to crawl all the comments from a post (not a page!
 You can try it out with:
 
 ```
-scrapy crawl comments -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a page="LINKOFTHEPOSTTOCRAWL" -o DUMPFILE.csv
+scrapy crawl comments -a email="EMAILTOLOGIN" -a password="PASSWORDTOLOGIN" -a post="LINKOFTHEPOSTTOCRAWL" -o DUMPFILE.csv
 ```
 
-The use is similar to fb spider, the only difference being the -a page parameter, which now is the link to a post. Make sure that the `page` option is a proper post link, for example:
+The use is similar to fb spider, the only difference being the -a post parameter, which now is the link to a post. Make sure that the `page` option is a proper post link, for example:
 
 ```
-rm trump_comments.csv; scrapy crawl comments -a email="obama@gmail.com" -a password="cm380jixke" -a page="https://mbasic.facebook.com/story.php?story_fbid=10162169751605725&id=153080620724" -o trump_comments.csv
+rm trump_comments.csv; scrapy crawl comments -a email="obama@gmail.com" -a password="cm380jixke" -a post="https://mbasic.facebook.com/story.php?story_fbid=10162169751605725&id=153080620724" -o trump_comments.csv
 ```
 
 
