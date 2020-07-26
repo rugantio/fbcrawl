@@ -32,8 +32,6 @@ class ProfileSpider(FacebookSpider):
         super().__init__(*args,**kwargs)
 
     def parse_page(self, response):
-        '''
-        '''
         if self.type == 'post':
             yield scrapy.Request(url=response.url,
                                  callback=self.parse_post,

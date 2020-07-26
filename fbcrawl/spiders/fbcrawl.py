@@ -142,9 +142,9 @@ class FacebookSpider(scrapy.Spider):
         Parse the given page selecting the posts.
         Then ask recursively for another page.
         '''
-#        #open page in browser for debug
-#        from scrapy.utils.response import open_in_browser
-#        open_in_browser(response)
+        #open page in browser for debug
+        #from scrapy.utils.response import open_in_browser
+        #open_in_browser(response)
     
         #select all posts
         for post in response.xpath("//div[contains(@data-ft,'top_level_post_id')]"):     
